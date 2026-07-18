@@ -1,0 +1,760 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+
+  /* Material Design 3 Expressive Colors */
+  --color-primary: var(--md-sys-color-primary);
+  --color-on-primary: var(--md-sys-color-on-primary);
+  --color-primary-container: var(--md-sys-color-primary-container);
+  --color-on-primary-container: var(--md-sys-color-on-primary-container);
+  
+  --color-secondary: var(--md-sys-color-secondary);
+  --color-on-secondary: var(--md-sys-color-on-secondary);
+  --color-secondary-container: var(--md-sys-color-secondary-container);
+  --color-on-secondary-container: var(--md-sys-color-on-secondary-container);
+  
+  --color-tertiary: var(--md-sys-color-tertiary);
+  --color-on-tertiary: var(--md-sys-color-on-tertiary);
+  --color-tertiary-container: var(--md-sys-color-tertiary-container);
+  --color-on-tertiary-container: var(--md-sys-color-on-tertiary-container);
+  
+  --color-error: var(--md-sys-color-error);
+  --color-on-error: var(--md-sys-color-on-error);
+  --color-error-container: var(--md-sys-color-error-container);
+  --color-on-error-container: var(--md-sys-color-on-error-container);
+  
+  --color-background: var(--md-sys-color-background);
+  --color-on-background: var(--md-sys-color-on-background);
+  --color-surface: var(--md-sys-color-surface);
+  --color-on-surface: var(--md-sys-color-on-surface);
+  
+  --color-surface-variant: var(--md-sys-color-surface-variant);
+  --color-on-surface-variant: var(--md-sys-color-on-surface-variant);
+  --color-outline: var(--md-sys-color-outline);
+  --color-outline-variant: var(--md-sys-color-outline-variant);
+
+  --color-surface-container-highest: var(--md-sys-color-surface-container-highest);
+  --color-surface-container-high: var(--md-sys-color-surface-container-high);
+  --color-surface-container: var(--md-sys-color-surface-container);
+  --color-surface-container-low: var(--md-sys-color-surface-container-low);
+  --color-surface-container-lowest: var(--md-sys-color-surface-container-lowest);
+
+  --radius-md3: var(--md-sys-shape-corner);
+}
+
+@layer base {
+  :root {
+    /* Default (Purple) Light Theme */
+    --md-sys-color-primary: #6750A4;
+    --md-sys-color-on-primary: #FFFFFF;
+    --md-sys-color-primary-container: #EADDFF;
+    --md-sys-color-on-primary-container: #21005D;
+    
+    --md-sys-color-secondary: #625B71;
+    --md-sys-color-on-secondary: #FFFFFF;
+    --md-sys-color-secondary-container: #E8DEF8;
+    --md-sys-color-on-secondary-container: #1D192B;
+    
+    --md-sys-color-tertiary: #7D5260;
+    --md-sys-color-on-tertiary: #FFFFFF;
+    --md-sys-color-tertiary-container: #FFD8E4;
+    --md-sys-color-on-tertiary-container: #31111D;
+    
+    --md-sys-color-error: #B3261E;
+    --md-sys-color-on-error: #FFFFFF;
+    --md-sys-color-error-container: #F9DEDC;
+    --md-sys-color-on-error-container: #410E0B;
+    
+    --md-sys-color-background: #FFFBFE;
+    --md-sys-color-on-background: #1C1B1F;
+    --md-sys-color-surface: #FFFBFE;
+    --md-sys-color-on-surface: #1C1B1F;
+    
+    --md-sys-color-surface-variant: #E7E0EC;
+    --md-sys-color-on-surface-variant: #49454F;
+    --md-sys-color-outline: #79747E;
+    --md-sys-color-outline-variant: #CAC4D0;
+
+    --md-sys-color-surface-container-highest: #E6E0E9;
+    --md-sys-color-surface-container-high: #ECE6F0;
+    --md-sys-color-surface-container: #F3EDF7;
+    --md-sys-color-surface-container-low: #F7F2FA;
+    --md-sys-color-surface-container-lowest: #FFFFFF;
+
+    --md-sys-shape-corner: 1.5rem; /* 24px */
+  }
+
+  :root.dark {
+    /* Default (Purple) Dark Theme */
+    --md-sys-color-primary: #D0BCFF;
+    --md-sys-color-on-primary: #381E72;
+    --md-sys-color-primary-container: #4F378B;
+    --md-sys-color-on-primary-container: #EADDFF;
+    
+    --md-sys-color-secondary: #CCC2DC;
+    --md-sys-color-on-secondary: #332D41;
+    --md-sys-color-secondary-container: #4A4458;
+    --md-sys-color-on-secondary-container: #E8DEF8;
+    
+    --md-sys-color-tertiary: #EFB8C8;
+    --md-sys-color-on-tertiary: #492532;
+    --md-sys-color-tertiary-container: #633B48;
+    --md-sys-color-on-tertiary-container: #FFD8E4;
+    
+    --md-sys-color-error: #F2B8B5;
+    --md-sys-color-on-error: #601410;
+    --md-sys-color-error-container: #8C1D18;
+    --md-sys-color-on-error-container: #F9DEDC;
+    
+    --md-sys-color-background: #1C1B1F;
+    --md-sys-color-on-background: #E6E1E5;
+    --md-sys-color-surface: #1C1B1F;
+    --md-sys-color-on-surface: #E6E1E5;
+    
+    --md-sys-color-surface-variant: #49454F;
+    --md-sys-color-on-surface-variant: #CAC4D0;
+    --md-sys-color-outline: #938F99;
+    --md-sys-color-outline-variant: #49454F;
+
+    --md-sys-color-surface-container-highest: #36343B;
+    --md-sys-color-surface-container-high: #2B2930;
+    --md-sys-color-surface-container: #211F26;
+    --md-sys-color-surface-container-low: #1D1B20;
+    --md-sys-color-surface-container-lowest: #0F0D13;
+  }
+
+  /* Theme Variations */
+  :root[data-theme="blue"] {
+    --md-sys-color-primary: #0061A4;
+    --md-sys-color-on-primary: #FFFFFF;
+    --md-sys-color-primary-container: #D1E4FF;
+    --md-sys-color-on-primary-container: #001D36;
+    --md-sys-color-surface-container: #F0F4FA;
+  }
+  :root[data-theme="blue"].dark {
+    --md-sys-color-primary: #9ECAFF;
+    --md-sys-color-on-primary: #003258;
+    --md-sys-color-primary-container: #00497D;
+    --md-sys-color-on-primary-container: #D1E4FF;
+    --md-sys-color-surface-container: #1A2027;
+  }
+
+  :root[data-theme="green"] {
+    --md-sys-color-primary: #006D40;
+    --md-sys-color-on-primary: #FFFFFF;
+    --md-sys-color-primary-container: #94F9B9;
+    --md-sys-color-on-primary-container: #002111;
+    --md-sys-color-surface-container: #F0F7F3;
+  }
+  :root[data-theme="green"].dark {
+    --md-sys-color-primary: #78DC9F;
+    --md-sys-color-on-primary: #00391F;
+    --md-sys-color-primary-container: #00522F;
+    --md-sys-color-on-primary-container: #94F9B9;
+    --md-sys-color-surface-container: #1A221E;
+  }
+
+  :root[data-theme="orange"] {
+    --md-sys-color-primary: #984800;
+    --md-sys-color-on-primary: #FFFFFF;
+    --md-sys-color-primary-container: #FFDBC6;
+    --md-sys-color-on-primary-container: #321300;
+    --md-sys-color-surface-container: #F9F3EF;
+  }
+  :root[data-theme="orange"].dark {
+    --md-sys-color-primary: #FFB68D;
+    --md-sys-color-on-primary: #522300;
+    --md-sys-color-primary-container: #743500;
+    --md-sys-color-on-primary-container: #FFDBC6;
+    --md-sys-color-surface-container: #231E1A;
+  }
+
+  :root[data-theme="rose"] {
+    --md-sys-color-primary: #9C4146;
+    --md-sys-color-on-primary: #FFFFFF;
+    --md-sys-color-primary-container: #FFDAD9;
+    --md-sys-color-on-primary-container: #40000A;
+    --md-sys-color-surface-container: #F9F0F0;
+  }
+  :root[data-theme="rose"].dark {
+    --md-sys-color-primary: #FFB3B4;
+    --md-sys-color-on-primary: #5F131C;
+    --md-sys-color-primary-container: #7E2A30;
+    --md-sys-color-on-primary-container: #FFDAD9;
+    --md-sys-color-surface-container: #231A1B;
+  }
+
+  /* Border Radius Variations */
+  :root[data-radius="sm"] { --md-sys-shape-corner: 0.25rem; }
+  :root[data-radius="md"] { --md-sys-shape-corner: 0.5rem; }
+  :root[data-radius="lg"] { --md-sys-shape-corner: 1rem; }
+  :root[data-radius="xl"] { --md-sys-shape-corner: 1.5rem; }
+  :root[data-radius="2xl"] { --md-sys-shape-corner: 2rem; }
+  :root[data-radius="3xl"] { --md-sys-shape-corner: 2.5rem; }
+  :root[data-radius="full"] { --md-sys-shape-corner: 4rem; }
+
+  body {
+    @apply bg-background text-on-background font-sans antialiased transition-colors duration-300;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight text-on-surface;
+  }
+
+  /* Markdown Content Styles */
+  .markdown-body {
+    @apply text-on-surface leading-loose text-lg;
+  }
+  .markdown-body h1 {
+    @apply text-4xl md:text-5xl font-display font-black mt-12 mb-6 text-on-surface tracking-tight;
+  }
+  .markdown-body h2 {
+    @apply text-3xl md:text-4xl font-display font-bold mt-10 mb-5 tracking-tight;
+    color: var(--md-sys-color-on-surface);
+  }
+  .markdown-body h3 {
+    @apply text-2xl md:text-3xl font-display font-bold mt-8 mb-4 text-on-surface;
+  }
+  .markdown-body h4 {
+    @apply text-xl md:text-2xl font-display font-bold mt-6 mb-3 text-on-surface;
+  }
+  .markdown-body p {
+    @apply mb-6 leading-8 text-on-surface-variant;
+  }
+  .markdown-body strong {
+    @apply font-bold;
+    color: var(--md-sys-color-primary);
+  }
+  .markdown-body em {
+    @apply text-on-surface-variant;
+  }
+  .markdown-body a {
+    @apply text-primary font-bold hover:text-on-primary-container hover:bg-primary-container px-1 rounded-md transition-colors decoration-2 underline-offset-4;
+  }
+  .markdown-body ul {
+    @apply list-disc list-outside ml-6 mb-6 space-y-2 marker:text-primary;
+  }
+  .markdown-body ol {
+    @apply list-decimal list-outside ml-6 mb-6 space-y-2 marker:text-primary font-medium;
+  }
+  .markdown-body blockquote {
+    @apply border-l-4 border-primary bg-surface-container-high p-6 rounded-r-2xl italic text-on-surface-variant text-xl my-8 shadow-sm;
+  }
+  .markdown-body pre {
+    @apply bg-surface-container-highest p-6 rounded-[var(--radius-md3)] overflow-x-auto mb-8 text-sm font-mono text-on-surface border border-outline-variant/10 shadow-inner;
+  }
+  .markdown-body code {
+    @apply bg-surface-container-highest px-2 py-1 rounded-md text-sm font-mono text-primary font-bold border border-outline-variant/20;
+  }
+  .markdown-body pre code {
+    @apply bg-transparent p-0 text-on-surface border-none font-normal;
+  }
+  .markdown-body img {
+    @apply rounded-[var(--radius-md3)] w-full h-auto my-8 shadow-lg border border-outline-variant/10 transition-transform hover:scale-[1.01] duration-500;
+  }
+  .markdown-body hr {
+    @apply border-t-2 border-outline-variant/20 my-12 w-24 mx-auto rounded-full;
+  }
+  .markdown-body table {
+    @apply w-full mb-8 border-collapse overflow-hidden rounded-[var(--radius-md3)] shadow-sm border border-outline-variant/20;
+  }
+  .markdown-body th {
+    @apply bg-surface-container-high p-4 text-left font-bold text-on-surface border-b border-outline-variant/20;
+  }
+  .markdown-body td {
+    @apply p-4 border-b border-outline-variant/10 text-on-surface-variant;
+  }
+
+  /* Dark mode: swap h2 ↔ strong colors */
+  .dark .markdown-body h2 {
+    color: var(--md-sys-color-primary) !important;
+  }
+  .dark .markdown-body strong {
+    color: var(--md-sys-color-on-surface) !important;
+  }
+}
+
+/* Twikoo Custom Styles - MD3 Expressive */
+#tcomment {
+  --tk-color-primary: var(--md-sys-color-primary);
+  --tk-color-primary-hover: var(--md-sys-color-primary-container);
+  --tk-color-checked: var(--md-sys-color-primary);
+  --tk-color-checked-text: var(--md-sys-color-on-primary);
+  --tk-color-comment-bg: var(--md-sys-color-surface-container);
+  --tk-color-comment-border: var(--md-sys-color-outline-variant);
+  font-family: var(--font-sans);
+}
+
+#tcomment .tk-main {
+  margin-top: 2rem;
+}
+
+/* Input Area */
+#tcomment .tk-submit {
+  background-color: var(--color-surface-container);
+  padding: 1.5rem;
+  border-radius: var(--radius-md3);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(var(--color-outline-variant), 0.1);
+  transition: all 0.3s ease;
+}
+
+#tcomment .tk-submit:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--color-primary), 0.2);
+  background-color: var(--color-surface-container-high);
+}
+
+#tcomment .tk-row {
+  display: flex;
+  gap: 1rem;
+}
+
+#tcomment .tk-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+#tcomment .tk-avatar {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  border: 2px solid var(--color-surface-container-high);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#tcomment .tk-input .el-textarea__inner {
+  background-color: var(--color-surface-container-high);
+  border: 1px solid transparent;
+  border-radius: 1.5rem;
+  color: var(--color-on-surface);
+  min-height: 140px;
+  padding: 1.25rem;
+  font-size: 1rem;
+  resize: vertical;
+  width: 100%;
+  transition: all 0.2s;
+}
+
+#tcomment .tk-input .el-textarea__inner:focus {
+  background-color: var(--color-surface-container-highest);
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+#tcomment .tk-input .el-textarea__inner::placeholder {
+  color: var(--color-on-surface-variant);
+  opacity: 0.6;
+}
+
+#tcomment .tk-meta-input {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  #tcomment .tk-meta-input {
+    flex-direction: row;
+  }
+}
+
+#tcomment .tk-meta-input .el-input {
+  width: 100%;
+  display: flex;
+}
+
+#tcomment .tk-meta-input .el-input-group__prepend {
+  background-color: var(--color-surface-container-highest);
+  color: var(--color-on-surface-variant);
+  font-weight: 600;
+  border: none;
+  border-radius: 1rem 0 0 1rem;
+  padding: 0 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#tcomment .tk-meta-input .el-input__inner {
+  background-color: var(--color-surface-container-high);
+  border: 1px solid transparent;
+  border-radius: 0 1rem 1rem 0;
+  color: var(--color-on-surface);
+  height: 3.5rem;
+  padding: 0 1.25rem;
+  width: 100%;
+  transition: all 0.2s;
+}
+
+#tcomment .tk-meta-input .el-input__inner:focus {
+  background-color: var(--color-surface-container-highest);
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+#tcomment .tk-meta-input .el-input__inner::placeholder {
+  color: var(--color-on-surface-variant);
+  opacity: 0.6;
+}
+
+/* Actions Bar */
+#tcomment .tk-row.actions {
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#tcomment .tk-action-icon {
+  color: var(--color-on-surface-variant);
+  cursor: pointer;
+  padding: 0.75rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+#tcomment .tk-action-icon:hover {
+  color: var(--color-primary);
+  background-color: var(--color-surface-container-highest);
+}
+
+#tcomment .tk-action-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+#tcomment .el-button.tk-preview,
+#tcomment .el-button.tk-cancel {
+  background-color: transparent;
+  color: var(--color-primary);
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  border: 1px solid var(--color-outline-variant);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#tcomment .el-button.tk-preview:hover,
+#tcomment .el-button.tk-cancel:hover {
+  background-color: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+  border-color: transparent;
+}
+
+#tcomment .el-button.tk-send {
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: 600;
+  padding: 0.75rem 2.5rem;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  margin-left: 1rem;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#tcomment .el-button.tk-send:hover {
+  background-color: var(--color-primary);
+  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+}
+
+#tcomment .el-button.tk-send:active {
+  transform: translateY(0);
+}
+
+/* Comments List */
+#tcomment .tk-comments-container {
+  margin-top: 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+#tcomment .tk-comment {
+  background-color: var(--color-surface-container);
+  border-radius: var(--radius-md3);
+  padding: 2rem;
+  border: 1px solid rgba(var(--color-outline-variant), 0.1);
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+#tcomment .tk-comment::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--color-primary), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#tcomment .tk-comment:hover {
+  border-color: rgba(var(--color-primary), 0.3);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+  transform: translateY(-2px);
+}
+
+#tcomment .tk-comment:hover::before {
+  opacity: 1;
+}
+
+#tcomment .tk-submit .tk-avatar {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  #tcomment .tk-submit .tk-avatar {
+    display: block;
+  }
+}
+
+#tcomment .tk-comment .tk-avatar {
+  margin-right: 1.5rem;
+  float: left;
+  border: 2px solid var(--color-surface);
+}
+
+#tcomment .tk-nick {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: var(--color-on-surface);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+#tcomment .tk-nick:hover {
+  color: var(--color-primary);
+}
+
+#tcomment .tk-tag {
+  background-color: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  margin-left: 0.75rem;
+  vertical-align: middle;
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#tcomment .tk-time {
+  font-size: 0.875rem;
+  color: var(--color-on-surface-variant);
+  margin-top: 0.25rem;
+  display: block;
+  font-weight: 500;
+}
+
+#tcomment .tk-content {
+  margin-top: 1.25rem;
+  color: var(--color-on-surface);
+  line-height: 1.7;
+  font-size: 1.05rem;
+  overflow-wrap: break-word;
+}
+
+#tcomment .tk-content p {
+  margin-bottom: 1rem;
+}
+
+#tcomment .tk-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Actions in Comment */
+#tcomment .tk-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+  border-top: 1px solid rgba(var(--color-outline-variant), 0.1);
+  padding-top: 1rem;
+}
+
+#tcomment .tk-action-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+}
+
+#tcomment .tk-action-link:hover {
+  color: var(--color-primary);
+  background-color: var(--color-surface-container-highest);
+}
+
+/* Replies */
+#tcomment .tk-replies {
+  margin-top: 2rem;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+}
+
+@media (min-width: 768px) {
+  #tcomment .tk-replies {
+    padding-left: 3rem;
+  }
+  
+  #tcomment .tk-replies::before {
+    content: '';
+    position: absolute;
+    left: 1rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: var(--color-outline-variant);
+    opacity: 0.2;
+  }
+}
+
+#tcomment .tk-replies .tk-comment {
+  background-color: var(--color-surface-container-high);
+  border: none;
+  box-shadow: none;
+  padding: 1.5rem;
+}
+
+#tcomment .tk-replies .tk-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+/* OwO Emoji Picker */
+#tcomment .OwO {
+  background-color: var(--color-surface-container-high);
+  border: 1px solid rgba(var(--color-outline-variant), 0.2);
+  border-radius: 1rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 0.75rem;
+  z-index: 10;
+}
+
+#tcomment .OwO .OwO-body {
+  background-color: var(--color-surface-container-high);
+  color: var(--color-on-surface);
+}
+
+#tcomment .OwO .OwO-body .OwO-bar {
+  border-top: 1px solid rgba(var(--color-outline-variant), 0.1);
+}
+
+#tcomment .OwO .OwO-body .OwO-bar .OwO-packages li {
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-radius: 0.5rem;
+}
+
+#tcomment .OwO .OwO-body .OwO-bar .OwO-packages li:hover {
+  background-color: var(--color-surface-container-highest);
+}
+
+#tcomment .OwO .OwO-body .OwO-items .OwO-item {
+  background-color: transparent;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+#tcomment .OwO .OwO-body .OwO-items .OwO-item:hover {
+  background-color: var(--color-surface-container-highest);
+}
+
+/* Preview */
+#tcomment .tk-preview-container {
+  border: 1px solid rgba(var(--color-primary), 0.2);
+  border-radius: var(--radius-md3);
+  padding: 1.5rem;
+  margin-top: 1rem;
+  background-color: rgba(var(--color-primary), 0.05);
+}
+
+/* Loading */
+#tcomment .el-loading-mask {
+  background-color: rgba(var(--color-surface), 0.8);
+  backdrop-filter: blur(4px);
+  z-index: 50;
+}
+
+#tcomment .el-loading-spinner .path {
+  stroke: var(--color-primary);
+}
+
+/* Expand Button */
+#tcomment .tk-expand {
+  background-color: var(--color-surface-container-highest);
+  color: var(--color-on-surface-variant);
+  border-radius: 9999px;
+  padding: 0.75rem 2rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  cursor: pointer;
+  display: inline-block;
+  margin-top: 1.5rem;
+  border: 1px solid transparent;
+}
+
+#tcomment .tk-expand:hover {
+  background-color: var(--color-primary-container);
+  color: var(--color-on-primary-container);
+  border-color: var(--color-primary);
+}
+
+/* Admin Panel Overrides */
+#tcomment .tk-admin-config .el-input__inner,
+#tcomment .tk-admin-config .el-textarea__inner {
+  color: var(--color-on-surface);
+  background-color: var(--color-surface-container-highest);
+  border: none;
+}
+
+#tcomment .tk-admin-config {
+  color: var(--color-on-surface);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* 隐藏默认光标 */
+  .hide-default-cursor,
+  .hide-default-cursor * {
+    cursor: none !important;
+  }
+}

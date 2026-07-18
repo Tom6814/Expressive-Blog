@@ -1,0 +1,5 @@
+{
+  "name": "Expressive Blog",
+  "description": "A Material Design 3 Expressive inspired headless blog built with React, Vite, and Framer Motion.",
+  "requestFramePermissions": []
+}

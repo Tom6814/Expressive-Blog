@@ -1,0 +1,4 @@
+{
+  "plan_type": "docker",
+  "builder": "docker"
+}
