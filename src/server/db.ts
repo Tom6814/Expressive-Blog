@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import path from 'path';
 
 import fs from 'fs';
@@ -98,6 +98,37 @@ export function setupDb() {
       key TEXT PRIMARY KEY,
       value TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT NOT NULL UNIQUE,
+      nickname TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      avatar TEXT,
+      role TEXT DEFAULT 'user',
+      created TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS webhooks (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      events TEXT NOT NULL,
+      secret TEXT DEFAULT '',
+      enabled INTEGER DEFAULT 1,
+      created TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS webhook_logs (
+      id TEXT PRIMARY KEY,
+      webhookId TEXT NOT NULL,
+      event TEXT NOT NULL,
+      status TEXT NOT NULL,
+      response TEXT DEFAULT '',
+      date TEXT NOT NULL,
+      FOREIGN KEY (webhookId) REFERENCES webhooks(id) ON DELETE CASCADE
+    );
   `);
 
   // Migrations for existing databases
@@ -121,6 +152,10 @@ export function setupDb() {
     db.prepare("ALTER TABLE posts ADD COLUMN sticky INTEGER DEFAULT 0").run();
   } catch (e) { /* Column likely exists */ }
 
+  try {
+    db.prepare("ALTER TABLE comments ADD COLUMN userId TEXT REFERENCES users(id)").run();
+  } catch (e) { /* Column likely exists */ }
+
   const count = db.prepare('SELECT COUNT(*) as count FROM posts').get() as { count: number };
   if (count.count === 0) {
     seedDb();
@@ -140,6 +175,14 @@ export function setupDb() {
     insertSetting.run('sidebar_widgets', 'profile,search,categories,tags,recent,trending,stats');
     // Set a default password if not exists
     insertSetting.run('admin_password', 'Torres114514');
+
+    // Seed admin user if not exists
+    const adminExists = db.prepare("SELECT id FROM users WHERE username = 'admin'").get();
+    if (!adminExists) {
+      const hash = createHash('sha256').update('Torres114514').digest('hex');
+      db.prepare('INSERT INTO users (id, username, nickname, email, password_hash, avatar, role, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        .run(randomUUID(), 'admin', 'admin', 'admin@expressive.blog', hash, null, 'admin', new Date().toISOString());
+    }
   }
 }
 

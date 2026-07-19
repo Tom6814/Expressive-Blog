@@ -18,6 +18,7 @@ This guide will help you deploy your blog to [Zeabur](https://zeabur.com).
     - Go to the **Settings** tab of your service.
     - Scroll to **Environment Variables**.
     - The environment is pre-configured by Docker, but you can override variables if needed. By default, `DB_PATH` is `/app/data/blog.db`.
+    - Set `JWT_SECRET` to a strong random string for production security.
 4.  **Configure Persistence (Important!)**:
     - Go to the **Settings** tab.
     - Scroll to **Volumes**.
@@ -30,8 +31,17 @@ This guide will help you deploy your blog to [Zeabur](https://zeabur.com).
     - Ensure the port is set to `3000`.
 6.  **Visit your Blog**:
     - Open the domain you configured.
-    - The default admin password is `Torres114514`.
-    - Go to `/admin/login` to access the dashboard.
+    - Go to `/admin` to access the dashboard (default admin credentials: `admin` / `Torres114514`).
+    - In admin settings under "站点", set your `site_url` to the deployed domain.
+
+## Account System
+
+Expressive Blog includes a built-in user account system. By default, an admin account is created:
+
+- **Username:** `admin`
+- **Password:** `Torres114514`
+
+The account system can be toggled on/off in **Admin → 功能 → 账号系统**. When disabled, comments use the traditional name + email approach.
 
 ## Troubleshooting
 

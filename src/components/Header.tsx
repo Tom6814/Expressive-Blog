@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, Menu, Palette, X, ArrowRight, Sun, Moon } from "lucide-react";
+import { Search, Menu, Palette, X, ArrowRight, User, LogOut, Settings, Shield } from "lucide-react";
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
 import { useTheme } from "../context/ThemeContext";
+import { useAuth } from "../context/AuthContext";
 import { useSettings } from "../context/SettingsContext";
 import { api } from "../lib/api";
 
 export function Header() {
-  const { setCustomizerOpen, isDark, toggleDark } = useTheme();
+  const { setCustomizerOpen } = useTheme();
   const { settings } = useSettings();
+  const { user, logout } = useAuth();
   const [menu, setMenu] = useState<{label: string, path?: string, children?: {label: string, path: string}[]}[]>([]);
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -16,6 +18,7 @@ export function Header() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { scrollY } = useScroll();
@@ -157,21 +160,80 @@ export function Header() {
             >
               <Search className="w-5 h-5 group-hover:scale-110 transition-transform" />
             </button>
-            <button
-              onClick={toggleDark}
-              className="p-2.5 rounded-full hover:bg-surface-variant/50 text-on-surface-variant hover:text-primary transition-all duration-300"
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              <motion.div
-                key={isDark ? 'moon' : 'sun'}
-                initial={{ rotate: -90, scale: 0 }}
-                animate={{ rotate: 0, scale: 1 }}
-                exit={{ rotate: 90, scale: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                {isDark ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-              </motion.div>
-            </button>
+            {/* User Button */}
+            {settings.account_system !== 'disabled' && (
+              <>
+                {user ? (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowMenu(!showMenu)}
+                      className="p-2.5 rounded-full hover:bg-surface-variant/50 text-on-surface-variant hover:text-primary transition-all duration-300 flex items-center gap-1"
+                      aria-label="User menu"
+                    >
+                      {user.avatar ? (
+                        <img src={user.avatar} alt="" className="w-5 h-5 rounded-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <User className="w-5 h-5" />
+                      )}
+                    </button>
+                    <AnimatePresence>
+                      {showMenu && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
+                          <motion.div
+                            initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute right-0 top-full mt-2 w-48 bg-surface-container rounded-2xl border border-outline-variant/10 shadow-xl z-50 overflow-hidden"
+                          >
+                            <div className="px-4 py-3 border-b border-outline-variant/10">
+                              <p className="text-sm font-bold text-on-surface">{user.nickname || user.username}</p>
+                              <p className="text-xs text-on-surface-variant/60">@{user.username}</p>
+                            </div>
+                            <div className="p-2">
+                              {user.role === 'admin' && (
+                                <Link
+                                  to="/admin"
+                                  onClick={() => setShowMenu(false)}
+                                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-on-surface-variant hover:bg-surface hover:text-on-surface transition-colors"
+                                >
+                                  <Shield className="w-4 h-4" />
+                                  管理后台
+                                </Link>
+                              )}
+                              <Link
+                                to="/profile"
+                                onClick={() => setShowMenu(false)}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-on-surface-variant hover:bg-surface hover:text-on-surface transition-colors"
+                              >
+                                <Settings className="w-4 h-4" />
+                                个人中心
+                              </Link>
+                              <button
+                                onClick={() => { logout(); setShowMenu(false); }}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-error hover:bg-error/10 transition-colors w-full text-left"
+                              >
+                                <LogOut className="w-4 h-4" />
+                                退出登录
+                              </button>
+                            </div>
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => navigate('/auth')}
+                    className="p-2.5 rounded-full hover:bg-surface-variant/50 text-on-surface-variant hover:text-primary transition-all duration-300"
+                    aria-label="Login"
+                  >
+                    <User className="w-5 h-5" />
+                  </button>
+                )}
+              </>
+            )}
             {settings.allow_user_override !== 'false' && (
               <button 
                 onClick={() => setCustomizerOpen(true)}

@@ -11,10 +11,12 @@ import { WIDGET_REGISTRY, DEFAULT_WIDGETS } from "../../components/Sidebar";
 const TABS = [
   { id: "site", label: "站点" },
   { id: "profile", label: "个人" },
-  { id: "hero", label: "Hero & 文章" },
+  { id: "content", label: "内容" },
   { id: "sidebar", label: "侧栏" },
-  { id: "global", label: "全局" },
+  { id: "appearance", label: "外观" },
+  { id: "features", label: "功能" },
   { id: "music", label: "音乐" },
+  { id: "webhook", label: "Webhook" },
   { id: "other", label: "其他" },
 ] as const;
 
@@ -36,6 +38,21 @@ export function AdminSettings() {
   const [musicList, setMusicList] = useState<any[]>([]);
   const [uploadingMusic, setUploadingMusic] = useState(false);
 
+  // Webhook state
+  const [webhooks, setWebhooks] = useState<any[]>([]);
+  const [webhookLogs, setWebhookLogs] = useState<Record<string, any[]>>({});
+  const [showWebhookForm, setShowWebhookForm] = useState(false);
+  const [editingWebhook, setEditingWebhook] = useState<any | null>(null);
+  const [webhookForm, setWebhookForm] = useState({ name: "", url: "", events: [] as string[], secret: "" });
+
+  const WEBHOOK_EVENTS = [
+    { value: "post_created", label: "文章发布" },
+    { value: "post_updated", label: "文章更新" },
+    { value: "post_deleted", label: "文章删除" },
+    { value: "moment_created", label: "动态发布" },
+    { value: "moment_deleted", label: "动态删除" },
+  ];
+
   const fetchMusicList = async () => {
     try {
       const list = await api.getMusicList();
@@ -44,6 +61,14 @@ export function AdminSettings() {
   };
 
   useEffect(() => { fetchMusicList(); }, []);
+  useEffect(() => { if (activeTab === "webhook") fetchWebhooks(); }, [activeTab]);
+
+  const fetchWebhooks = async () => {
+    try {
+      const list = await api.getWebhooks();
+      setWebhooks(Array.isArray(list) ? list : []);
+    } catch { setWebhooks([]); }
+  };
 
   const handleUploadMusic = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -207,6 +232,40 @@ export function AdminSettings() {
     alert("设置保存成功！");
   };
 
+  // Webhook handlers
+  const handleSaveWebhook = async () => {
+    if (!webhookForm.name || !webhookForm.url || webhookForm.events.length === 0) return;
+    try {
+      if (editingWebhook) {
+        await api.updateWebhook(editingWebhook.id, webhookForm);
+      } else {
+        await api.createWebhook(webhookForm);
+      }
+      setShowWebhookForm(false);
+      setEditingWebhook(null);
+      setWebhookForm({ name: "", url: "", events: [], secret: "" });
+      fetchWebhooks();
+    } catch {}
+  };
+
+  const handleToggleWebhook = async (wh: any) => {
+    await api.updateWebhook(wh.id, { ...wh, enabled: wh.enabled ? 0 : 1, events: JSON.parse(wh.events || '[]') });
+    fetchWebhooks();
+  };
+
+  const handleDeleteWebhook = async (id: string) => {
+    if (!confirm("确定删除此 webhook？")) return;
+    await api.deleteWebhook(id);
+    fetchWebhooks();
+  };
+
+  const handleViewLogs = async (id: string) => {
+    try {
+      const logs = await api.getWebhookLogs(id);
+      setWebhookLogs(prev => ({ ...prev, [id]: Array.isArray(logs) ? logs : [] }));
+    } catch { setWebhookLogs(prev => ({ ...prev, [id]: [] })); }
+  };
+
   const handleExport = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(settings, null, 2));
     const anchor = document.createElement("a");
@@ -313,6 +372,11 @@ export function AdminSettings() {
                 <div className="md:col-span-2">
                   <label className="block text-sm font-bold text-on-surface-variant mb-2">站点图标 URL</label>
                   <input type="url" value={settings.site_icon || ""} onChange={e => handleChange("site_icon", e.target.value)} className={inputClass} />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-bold text-on-surface-variant mb-2">本站网址</label>
+                  <input type="url" value={settings.site_url || ""} onChange={e => handleChange("site_url", e.target.value)} placeholder="https://example.com" className={inputClass} />
+                  <p className="text-xs text-on-surface-variant/50 mt-1">用于 Webhook、分享链接等场景的根网址</p>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-on-surface-variant mb-2">侧边栏位置</label>
@@ -436,8 +500,8 @@ export function AdminSettings() {
           </>
         )}
 
-        {/* ==================== Hero & 文章 ==================== */}
-        {activeTab === "hero" && (
+        {/* ==================== 内容 ==================== */}
+        {activeTab === "content" && (
           <>
             <section>
               <SectionTitle>Hero 专区</SectionTitle>
@@ -483,6 +547,12 @@ export function AdminSettings() {
                 <div>
                   <label className="block text-sm font-bold text-on-surface-variant mb-2">显示作者信息卡片</label>
                   <select value={settings.show_author_bio || "true"} onChange={e => handleChange("show_author_bio", e.target.value)} className={selectClass}>
+                    <option value="true">显示</option><option value="false">隐藏</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-on-surface-variant mb-2">显示相关文章</label>
+                  <select value={settings.show_related_posts || "true"} onChange={e => handleChange("show_related_posts", e.target.value)} className={selectClass}>
                     <option value="true">显示</option><option value="false">隐藏</option>
                   </select>
                 </div>
@@ -554,8 +624,8 @@ export function AdminSettings() {
           </>
         )}
 
-        {/* ==================== 全局 ==================== */}
-        {activeTab === "global" && (
+        {/* ==================== 外观 ==================== */}
+        {activeTab === "appearance" && (
           <>
             <section>
               <SectionTitle>全局背景</SectionTitle>
@@ -713,23 +783,9 @@ export function AdminSettings() {
           </>
         )}
 
-        {/* ==================== 其他 ==================== */}
-        {activeTab === "other" && (
+        {/* ==================== 功能 ==================== */}
+        {activeTab === "features" && (
           <>
-            <section>
-              <SectionTitle>导航菜单</SectionTitle>
-              <div className="space-y-3">
-                {menuItems.map((item, index) => (
-                  <div key={index} className="flex flex-col md:flex-row items-start md:items-center gap-4 bg-surface p-4 rounded-xl border border-outline-variant/10">
-                    <input type="text" value={item.label} onChange={e => handleMenuChange(index, "label", e.target.value)} placeholder="标签" className="flex-1 w-full px-4 py-3 rounded-xl bg-surface-container-high border border-outline-variant/30 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all" />
-                    <input type="text" value={item.path} onChange={e => handleMenuChange(index, "path", e.target.value)} placeholder="路径 (如 /about)" className="flex-1 w-full px-4 py-3 rounded-xl bg-surface-container-high border border-outline-variant/30 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all" />
-                    <button type="button" onClick={() => removeMenuItem(index)} className="p-3 text-error hover:bg-error-container rounded-xl transition-colors"><Trash2 className="w-5 h-5" /></button>
-                  </div>
-                ))}
-                <button type="button" onClick={addMenuItem} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-secondary-container text-on-secondary-container rounded-xl font-bold hover:bg-secondary hover:text-on-secondary transition-colors"><Plus className="w-5 h-5" /> 添加菜单项</button>
-              </div>
-            </section>
-
             <section>
               <SectionTitle>评论系统</SectionTitle>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -747,6 +803,94 @@ export function AdminSettings() {
             </section>
 
             <section>
+              <SectionTitle>账号系统</SectionTitle>
+              <div className="flex items-center justify-between bg-surface p-4 rounded-xl border border-outline-variant/10">
+                <div>
+                  <span className="text-sm font-bold text-on-surface">启用账号系统</span>
+                  <p className="text-xs text-on-surface-variant/50 mt-1">关闭后评论将使用昵称+邮箱模式，并隐藏顶栏用户按钮</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={settings.account_system !== "disabled"} onChange={e => handleChange("account_system", e.target.checked ? "enabled" : "disabled")} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-surface-variant rounded-full peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
+                </label>
+              </div>
+            </section>
+
+            <section>
+              <SectionTitle>导航菜单</SectionTitle>
+              <div className="space-y-3">
+                {menuItems.map((item, index) => (
+                  <div key={index} className="flex flex-col md:flex-row items-start md:items-center gap-4 bg-surface p-4 rounded-xl border border-outline-variant/10">
+                    <input type="text" value={item.label} onChange={e => handleMenuChange(index, "label", e.target.value)} placeholder="标签" className="flex-1 w-full px-4 py-3 rounded-xl bg-surface-container-high border border-outline-variant/30 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all" />
+                    <input type="text" value={item.path} onChange={e => handleMenuChange(index, "path", e.target.value)} placeholder="路径 (如 /about)" className="flex-1 w-full px-4 py-3 rounded-xl bg-surface-container-high border border-outline-variant/30 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary transition-all" />
+                    <button type="button" onClick={() => removeMenuItem(index)} className="p-3 text-error hover:bg-error-container rounded-xl transition-colors"><Trash2 className="w-5 h-5" /></button>
+                  </div>
+                ))}
+                <button type="button" onClick={addMenuItem} className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-secondary-container text-on-secondary-container rounded-xl font-bold hover:bg-secondary hover:text-on-secondary transition-colors"><Plus className="w-5 h-5" /> 添加菜单项</button>
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* ==================== 其他 ==================== */}
+        {activeTab === "other" && (
+          <>
+            {/* Export / Import */}
+            <section>
+              <SectionTitle>数据备份与恢复</SectionTitle>
+              <p className="text-sm text-on-surface-variant/60 mb-4">
+                导出站点全量数据（设置、文章、动态、分类、标签、评论等），支持 ZIP 格式导入恢复。
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      window.open('/api/export', '_blank');
+                    } catch {}
+                  }}
+                  className="flex items-center gap-2 px-5 py-3 bg-primary text-on-primary rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-sm"
+                >
+                  <Download className="w-5 h-5" />
+                  导出全量数据
+                </button>
+                <label className="flex items-center gap-2 px-5 py-3 bg-surface-container border border-outline-variant/20 text-on-surface rounded-xl font-bold hover:bg-surface-variant transition-colors cursor-pointer">
+                  <Upload className="w-5 h-5" />
+                  导入 ZIP 恢复
+                  <input
+                    type="file"
+                    accept=".zip"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (!confirm('导入将替换当前所有数据（设置、文章、动态、分类、标签、评论），不可撤销。确定继续？')) return;
+                      try {
+                        const token = localStorage.getItem('auth_token');
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        const res = await fetch('/api/import', {
+                          method: 'POST',
+                          headers: token ? { Authorization: `Bearer ${token}` } : {},
+                          body: formData,
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                          alert('导入成功！页面将刷新以应用更改。');
+                          window.location.reload();
+                        } else {
+                          alert('导入失败: ' + (data.error || '未知错误'));
+                        }
+                      } catch (err: any) {
+                        alert('导入失败: ' + err.message);
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+            </section>
+
+            <section>
               <SectionTitle>关于页面内容</SectionTitle>
               <label className="block text-sm font-bold text-on-surface-variant mb-2">内容 (支持 Markdown)</label>
               <textarea value={settings.about_content || ""} onChange={e => handleChange("about_content", e.target.value)} placeholder="# 你好，世界！" className={`${textareaClass} h-96`} />
@@ -759,6 +903,128 @@ export function AdminSettings() {
                 <div><label className="block text-sm font-bold text-on-surface-variant mb-2">新密码</label><input type="password" value={passwords.new} onChange={e => setPasswords({ ...passwords, new: e.target.value })} className={inputClass} /></div>
                 {passwordMessage.text && (<p className={`text-sm font-bold ${passwordMessage.type === "error" ? "text-error" : "text-primary"}`}>{passwordMessage.text}</p>)}
                 <button type="button" onClick={handleChangePassword} disabled={!passwords.old || !passwords.new} className="px-6 py-3 bg-secondary-container text-on-secondary-container rounded-xl font-bold hover:bg-secondary hover:text-on-secondary transition-colors disabled:opacity-50">更新密码</button>
+              </div>
+            </section>
+          </>
+        )}
+
+        {activeTab === "webhook" && (
+          <>
+            <section>
+              <div className="flex items-center justify-between mb-6">
+                <SectionTitle>Webhook 管理</SectionTitle>
+                <button type="button" onClick={() => { setEditingWebhook(null); setWebhookForm({ name: "", url: "", events: [], secret: "" }); setShowWebhookForm(true); }} className="flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors">
+                  <Plus className="w-4 h-4" /> 添加 Webhook
+                </button>
+              </div>
+
+              {/* Memos Integration */}
+              <div className="mb-6 p-5 bg-tertiary-container/30 rounded-2xl border border-tertiary/20">
+                <h3 className="text-lg font-bold text-on-surface mb-4 flex items-center gap-2">
+                  <span className="text-2xl">📝</span> Memos 同步
+                </h3>
+                <p className="text-sm text-on-surface-variant/70 mb-4">
+                  接收 Memos 的 webhook，自动将 Memo 同步为网站动态。
+                </p>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-bold text-on-surface">启用 Memos 同步</span>
+                      <p className="text-xs text-on-surface-variant/50">开启后接收 Memos 发来的 webhook 并自动创建动态</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={settings.memos_webhook_enabled === "1"} onChange={e => handleChange("memos_webhook_enabled", e.target.checked ? "1" : "0")} className="sr-only peer" />
+                      <div className="w-11 h-6 bg-surface-variant rounded-full peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
+                    </label>
+                  </div>
+                  {settings.memos_webhook_enabled === "1" && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-bold text-on-surface-variant mb-1">Webhook 端点 (填入 Memos 设置)</label>
+                        <code className="text-xs bg-surface p-2 rounded-lg text-primary block break-all select-all">
+                          {settings.site_url || (typeof window !== 'undefined' ? window.location.origin : '')}/api/webhooks/memos
+                        </code>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-on-surface-variant mb-1">限定 Memos 用户 ID</label>
+                        <input type="text" value={settings.memos_user_filter || ""} onChange={e => handleChange("memos_user_filter", e.target.value)} placeholder="可选，逗号分隔多个 ID，例如: 1,2,3" className={inputClass} />
+                        <p className="text-xs text-on-surface-variant/40 mt-1">留空则接收所有用户的 Memo。可在 Memos 用户设置中找到 creatorId。</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="mb-6 p-4 bg-surface-container-low rounded-2xl border border-outline-variant/10">
+                <p className="text-sm font-bold text-on-surface mb-2">接收 Webhook 端点</p>
+                <code className="text-xs bg-surface p-2 rounded-lg text-primary block break-all">POST /api/webhooks/incoming?event=create_post</code>
+                <p className="text-xs text-on-surface-variant/50 mt-2">支持: create_post、create_moment。外部系统可发送 POST 到此端点创建文章或动态。</p>
+              </div>
+              {showWebhookForm && (
+                <div className="mb-6 p-6 bg-surface-container-low rounded-2xl border border-outline-variant/10">
+                  <h3 className="text-lg font-bold text-on-surface mb-4">{editingWebhook ? "编辑 Webhook" : "新建 Webhook"}</h3>
+                  <div className="space-y-4">
+                    <div><label className="block text-sm font-bold text-on-surface-variant mb-1">名称</label><input type="text" value={webhookForm.name} onChange={e => setWebhookForm(f => ({ ...f, name: e.target.value }))} placeholder="例如: 通知到 Telegram" className={inputClass} /></div>
+                    <div><label className="block text-sm font-bold text-on-surface-variant mb-1">URL</label><input type="url" value={webhookForm.url} onChange={e => setWebhookForm(f => ({ ...f, url: e.target.value }))} placeholder="https://example.com/webhook" className={inputClass} /></div>
+                    <div><label className="block text-sm font-bold text-on-surface-variant mb-1">密钥 (可选)</label><input type="text" value={webhookForm.secret} onChange={e => setWebhookForm(f => ({ ...f, secret: e.target.value }))} placeholder="用于验证请求来源" className={inputClass} /></div>
+                    <div>
+                      <label className="block text-sm font-bold text-on-surface-variant mb-2">触发事件</label>
+                      <div className="flex flex-wrap gap-2">
+                        {WEBHOOK_EVENTS.map(ev => (
+                          <button key={ev.value} type="button" onClick={() => setWebhookForm(f => ({ ...f, events: f.events.includes(ev.value) ? f.events.filter(e => e !== ev.value) : [...f.events, ev.value] }))} className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${webhookForm.events.includes(ev.value) ? "bg-primary text-on-primary" : "bg-surface text-on-surface-variant hover:bg-surface-variant"}`}>
+                            {ev.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                      <button onClick={handleSaveWebhook} className="px-6 py-2.5 bg-primary text-on-primary rounded-xl font-bold hover:bg-primary/90 transition-colors">{editingWebhook ? "更新" : "创建"}</button>
+                      <button onClick={() => { setShowWebhookForm(false); setEditingWebhook(null); }} className="px-6 py-2.5 bg-surface text-on-surface rounded-xl font-bold hover:bg-surface-variant transition-colors">取消</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="space-y-3">
+                {webhooks.length === 0 ? (
+                  <div className="text-center py-12 text-sm text-on-surface-variant/50">暂无 webhook，点击上方按钮创建</div>
+                ) : (
+                  webhooks.map((wh: any) => {
+                    const evts = (() => { try { return JSON.parse(wh.events || '[]'); } catch { return []; } })();
+                    return (
+                      <div key={wh.id} className="bg-surface-container-low rounded-2xl border border-outline-variant/10 p-5">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            <h4 className="font-bold text-on-surface">{wh.name}</h4>
+                            <span className={`w-2 h-2 rounded-full ${wh.enabled ? (wh.lastStatus === 'failed' ? 'bg-yellow-400' : 'bg-green-400') : 'bg-outline-variant'}`} />
+                            <span className="text-xs text-on-surface-variant/50">{wh.enabled ? (wh.lastStatus === 'failed' ? '最近失败' : '运行中') : '已停用'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => handleToggleWebhook(wh)} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${wh.enabled ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}> {wh.enabled ? "停用" : "启用"} </button>
+                            <button onClick={() => { setEditingWebhook(wh); setWebhookForm({ name: wh.name, url: wh.url, events: evts, secret: wh.secret || "" }); setShowWebhookForm(true); }} className="px-3 py-1.5 text-xs font-bold bg-primary-container text-on-primary-container rounded-lg hover:bg-primary hover:text-on-primary transition-colors">编辑</button>
+                            <button onClick={() => handleDeleteWebhook(wh.id)} className="px-3 py-1.5 text-xs font-bold bg-error-container text-on-error-container rounded-lg hover:bg-error hover:text-on-error transition-colors">删除</button>
+                          </div>
+                        </div>
+                        <p className="text-xs text-on-surface-variant/60 truncate mb-3">{wh.url}</p>
+                        <div className="flex items-center gap-2 mb-3">
+                          {evts.map((ev: string) => (<span key={ev} className="px-2 py-0.5 text-[10px] font-bold bg-surface text-on-surface-variant/60 rounded-full">{WEBHOOK_EVENTS.find(e => e.value === ev)?.label || ev}</span>))}
+                        </div>
+                        <button onClick={() => handleViewLogs(wh.id)} className="text-xs text-primary font-bold hover:underline">查看日志 {wh.logCount > 0 ? `(${wh.logCount})` : ''}</button>
+                        {(webhookLogs[wh.id] || []).length > 0 && (
+                          <div className="mt-3 space-y-1 max-h-48 overflow-y-auto bg-surface rounded-xl p-3">
+                            {(webhookLogs[wh.id] || []).map((log: any) => (
+                              <div key={log.id} className="flex items-center gap-2 text-[11px]">
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${log.status === 'success' ? 'bg-green-400' : 'bg-red-400'}`} />
+                                <span className="text-on-surface-variant/50 shrink-0">{new Date(log.date).toLocaleString()}</span>
+                                <span className="font-bold text-on-surface-variant/60 shrink-0">{log.event}</span>
+                                <span className="truncate text-on-surface-variant/40">{log.response}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </section>
           </>

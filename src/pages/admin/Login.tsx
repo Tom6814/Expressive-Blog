@@ -1,13 +1,20 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Lock } from "lucide-react";
 import { api } from "../../lib/api";
+import { useSettings } from "../../context/SettingsContext";
 
 export function AdminLogin() {
+  const { settings } = useSettings();
+  const navigate = useNavigate();
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const navigate = useNavigate();
+
+  // When account system is enabled, redirect to unified auth page
+  if (settings.account_system !== "disabled") {
+    return <Navigate to="/auth" replace />;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +26,7 @@ export function AdminLogin() {
       } else {
         setError("密码错误");
       }
-    } catch (err) {
+    } catch {
       setError("登录失败");
     }
   };

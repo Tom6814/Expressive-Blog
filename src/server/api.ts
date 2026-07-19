@@ -3,8 +3,8 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { randomUUID, createHash } from 'crypto';
 import db from './db';
-import { randomUUID } from 'crypto';
 
 const router = Router();
 
@@ -96,6 +96,19 @@ const coverUpload = multer({
   },
 });
 
+// --- Backup Import Config ---
+const zipUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'application/zip' || path.extname(file.originalname).toLowerCase() === '.zip') {
+      cb(null, true);
+    } else {
+      cb(new Error('仅支持 ZIP 文件'));
+    }
+  },
+});
+
 // --- Auth ---
 router.post('/login', (req, res) => {
   const { password } = req.body;
@@ -108,6 +121,98 @@ router.post('/login', (req, res) => {
   } else {
     res.status(401).json({ success: false, error: '密码错误' });
   }
+});
+
+// --- User Account System ---
+
+function hashPassword(password: string) {
+  return createHash('sha256').update(password).digest('hex');
+}
+
+function userAuthMiddleware(req: Request, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ error: '请先登录' });
+  try {
+    const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as { userId: string; admin?: boolean };
+    (req as any).userId = payload.userId;
+    (req as any).isAdmin = payload.admin || false;
+    next();
+  } catch {
+    res.status(401).json({ error: '登录已过期' });
+  }
+}
+
+// User registration
+router.post('/users/register', (req, res) => {
+  try {
+    const { username, nickname, email, password, avatar } = req.body;
+    if (!username || !email || !password) return res.status(400).json({ error: '用户名、邮箱和密码为必填项' });
+    if (!/^[a-z0-9_]+$/.test(username)) return res.status(400).json({ error: '用户名仅支持小写字母、数字和下划线' });
+    if (username.length < 3 || username.length > 20) return res.status(400).json({ error: '用户名长度为 3-20 个字符' });
+    if (password.length < 6) return res.status(400).json({ error: '密码至少需要 6 个字符' });
+
+    const existing = db.prepare('SELECT id FROM users WHERE username = ? OR email = ?').get(username, email);
+    if (existing) return res.status(400).json({ error: '用户名或邮箱已被注册' });
+
+    const id = 'u_' + randomUUID();
+    const passwordHash = hashPassword(password);
+    const displayNickname = (nickname || username).trim();
+    db.prepare('INSERT INTO users (id, username, nickname, email, password_hash, avatar, role, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(id, username.toLowerCase(), displayNickname, email.toLowerCase(), passwordHash, avatar || null, 'user', new Date().toISOString());
+
+    const token = jwt.sign({ userId: id, admin: false }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({ success: true, token, user: { id, username: username.toLowerCase(), nickname: displayNickname, email: email.toLowerCase(), avatar: avatar || null, role: 'user' } });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// User login
+router.post('/users/login', (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ error: '请输入用户名和密码' });
+
+    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username.toLowerCase()) as any;
+    if (!user) return res.status(401).json({ error: '用户名或密码错误' });
+
+    if (user.password_hash !== hashPassword(password)) {
+      return res.status(401).json({ error: '用户名或密码错误' });
+    }
+
+    const isAdmin = user.role === 'admin';
+    const token = jwt.sign({ userId: user.id, admin: isAdmin }, JWT_SECRET, { expiresIn: '30d' });
+    res.json({
+      success: true, token,
+      user: { id: user.id, username: user.username, nickname: user.nickname, email: user.email, avatar: user.avatar, role: user.role }
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get current user
+router.get('/users/me', userAuthMiddleware, (req, res) => {
+  const user = db.prepare('SELECT id, username, nickname, email, avatar, role, created FROM users WHERE id = ?').get((req as any).userId) as any;
+  if (!user) return res.status(404).json({ error: '用户不存在' });
+  res.json(user);
+});
+
+// Update own profile
+router.put('/users/me', userAuthMiddleware, (req, res) => {
+  const { nickname, avatar, email } = req.body;
+  const userId = (req as any).userId;
+  if (nickname !== undefined) db.prepare('UPDATE users SET nickname = ? WHERE id = ?').run(nickname.trim(), userId);
+  if (avatar !== undefined) db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatar, userId);
+  if (email !== undefined && email) db.prepare('UPDATE users SET email = ? WHERE id = ?').run(email.toLowerCase().trim(), userId);
+  const updated = db.prepare('SELECT id, username, nickname, email, avatar, role FROM users WHERE id = ?').get(userId);
+  res.json(updated);
+});
+
+// Admin: list users
+router.get('/users', authMiddleware, (req, res) => {
+  const users = db.prepare('SELECT id, username, nickname, email, role, created FROM users ORDER BY created DESC').all();
+  res.json(users);
 });
 
 router.post('/change-password', authMiddleware, (req, res) => {
@@ -406,6 +511,7 @@ router.post('/posts', authMiddleware, (req, res) => {
     }
   });
   transaction();
+  fireWebhooks('post_created', { id, title, slug, status });
   res.json({ id, slug });
 });
 
@@ -461,6 +567,7 @@ router.put('/posts/:id', authMiddleware, (req, res) => {
     }
   });
   transaction();
+  fireWebhooks('post_updated', { id, title, slug, status });
   res.json({ success: true });
 });
 
@@ -479,6 +586,7 @@ router.delete('/posts/:id', authMiddleware, (req, res) => {
     db.prepare('DELETE FROM posts WHERE id = ?').run(id);
   });
   transaction();
+  fireWebhooks('post_deleted', { id });
   res.json({ success: true });
 });
 
@@ -534,6 +642,7 @@ router.post('/moments', authMiddleware, (req, res) => {
   const date = new Date().toISOString();
   db.prepare('INSERT INTO moments (id, content, date, images, likes) VALUES (?, ?, ?, ?, 0)')
     .run(id, content, date, JSON.stringify(images || []));
+  fireWebhooks('moment_created', { id, content });
   res.json({ id, content, date, images: images || [], likes: 0, commentCount: 0 });
 });
 
@@ -543,6 +652,7 @@ router.delete('/moments/:id', authMiddleware, (req, res) => {
     db.prepare('DELETE FROM moments WHERE id = ?').run(req.params.id);
   });
   transaction();
+  fireWebhooks('moment_deleted', { id: req.params.id });
   res.json({ success: true });
 });
 
@@ -551,11 +661,23 @@ router.get('/comments', (req, res) => {
   const { postId, momentId, page = '1', limit = '20' } = req.query;
 
   if (postId) {
-    const comments = db.prepare('SELECT * FROM comments WHERE postId = ? ORDER BY date DESC').all(postId);
+    const comments = db.prepare(`
+      SELECT c.*, u.username, u.nickname as user_nickname
+      FROM comments c
+      LEFT JOIN users u ON c.userId = u.id
+      WHERE c.postId = ?
+      ORDER BY c.date DESC
+    `).all(postId);
     return res.json({ data: comments, total: comments.length });
   }
   if (momentId) {
-    const comments = db.prepare('SELECT * FROM comments WHERE momentId = ? ORDER BY date DESC').all(momentId);
+    const comments = db.prepare(`
+      SELECT c.*, u.username, u.nickname as user_nickname
+      FROM comments c
+      LEFT JOIN users u ON c.userId = u.id
+      WHERE c.momentId = ?
+      ORDER BY c.date DESC
+    `).all(momentId);
     return res.json({ data: comments, total: comments.length });
   }
 
@@ -573,7 +695,7 @@ router.get('/comments', (req, res) => {
 });
 
 router.post('/comments', (req, res) => {
-  const { postId, momentId, author, email, content, avatar } = req.body;
+  const { postId, momentId, author, email, content, avatar, userId } = req.body;
   if ((!postId && !momentId) || !author || !email || !content) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
@@ -583,12 +705,12 @@ router.post('/comments', (req, res) => {
 
   const transaction = db.transaction(() => {
     if (postId) {
-      db.prepare('INSERT INTO comments (id, postId, author, email, content, date, avatar) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .run(id, postId, author, email, content, date, avatar);
+      db.prepare('INSERT INTO comments (id, postId, author, email, content, date, avatar, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        .run(id, postId, author, email, content, date, avatar, userId || null);
       db.prepare('UPDATE posts SET comments = comments + 1 WHERE id = ?').run(postId);
     } else if (momentId) {
-      db.prepare('INSERT INTO comments (id, momentId, author, email, content, date, avatar) VALUES (?, ?, ?, ?, ?, ?, ?)')
-        .run(id, momentId, author, email, content, date, avatar);
+      db.prepare('INSERT INTO comments (id, momentId, author, email, content, date, avatar, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+        .run(id, momentId, author, email, content, date, avatar, userId || null);
     }
   });
   transaction();
@@ -848,6 +970,260 @@ router.get('/music/proxy-stream', async (req, res) => {
     if (!cancelled) res.end();
   } catch (err: any) {
     if (!res.headersSent) res.status(502).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// Webhook utility — forward events to registered webhooks
+// ============================================================
+async function fireWebhooks(event: string, payload: any) {
+  const webhooks = db.prepare('SELECT * FROM webhooks WHERE enabled = 1 AND events LIKE ?').all(`%${event}%`) as any[];
+  if (webhooks.length === 0) return;
+
+  const body = JSON.stringify({ event, data: payload, timestamp: new Date().toISOString() });
+
+  await Promise.allSettled(webhooks.map(async wh => {
+    const logId = randomUUID();
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(wh.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(wh.secret ? { 'X-Webhook-Secret': wh.secret } : {}),
+          'X-Event': event,
+        },
+        body,
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      const status = res.ok ? 'success' : 'failed';
+      const response = res.ok ? `${res.status} OK` : `${res.status} ${res.statusText}`;
+      db.prepare('INSERT INTO webhook_logs (id, webhookId, event, status, response, date) VALUES (?, ?, ?, ?, ?, ?)').run(logId, wh.id, event, status, response, new Date().toISOString());
+    } catch (err: any) {
+      db.prepare('INSERT INTO webhook_logs (id, webhookId, event, status, response, date) VALUES (?, ?, ?, ?, ?, ?)').run(logId, wh.id, event, 'failed', err.message, new Date().toISOString());
+    }
+  }));
+}
+
+// Incoming webhook endpoint
+router.post('/webhooks/incoming', (req, res) => {
+  const { event } = req.query;
+  const body = req.body;
+  console.log(`[Incoming Webhook] event=${event}`, JSON.stringify(body).slice(0, 200));
+  // Handle incoming events
+  if (event === 'create_post') {
+    const { title, slug, content, excerpt, categoryId } = body;
+    if (title && slug && content) {
+      const id = 'p_' + randomUUID();
+      const date = new Date().toISOString();
+      db.prepare('INSERT INTO posts (id, title, slug, excerpt, content, coverImage, date, categoryId, views, comments, likes, status, sticky) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?, 0)').run(id, title, slug, excerpt || '', content, body.coverImage || '', date, categoryId || null, body.status || 'published');
+      res.json({ success: true, id });
+      return;
+    }
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  if (event === 'create_moment') {
+    const { content, images } = body;
+    if (content?.trim()) {
+      const id = 'm_' + randomUUID();
+      db.prepare('INSERT INTO moments (id, content, date, images, likes) VALUES (?, ?, ?, ?, 0)').run(id, content, new Date().toISOString(), JSON.stringify(images || []));
+      res.json({ success: true, id });
+      return;
+    }
+    return res.status(400).json({ error: 'Content is required' });
+  }
+  res.json({ success: true, message: 'Event received' });
+});
+
+// Admin: manage webhooks
+router.get('/webhooks', authMiddleware, (req, res) => {
+  const webhooks = db.prepare('SELECT w.*, (SELECT COUNT(*) FROM webhook_logs WHERE webhookId = w.id) as logCount, (SELECT status FROM webhook_logs WHERE webhookId = w.id ORDER BY date DESC LIMIT 1) as lastStatus FROM webhooks w ORDER BY w.created DESC').all();
+  res.json(webhooks);
+});
+
+router.post('/webhooks', authMiddleware, (req, res) => {
+  const { name, url, events, secret } = req.body;
+  if (!name || !url || !events) return res.status(400).json({ error: '请填写名称、URL 和事件' });
+  const id = randomUUID();
+  db.prepare('INSERT INTO webhooks (id, name, url, events, secret, enabled, created) VALUES (?, ?, ?, ?, ?, 1, ?)').run(id, name, url, JSON.stringify(events), secret || '', new Date().toISOString());
+  res.json({ id });
+});
+
+router.put('/webhooks/:id', authMiddleware, (req, res) => {
+  const { name, url, events, secret, enabled } = req.body;
+  db.prepare('UPDATE webhooks SET name=?, url=?, events=?, secret=?, enabled=? WHERE id=?').run(name, url, JSON.stringify(events), secret || '', enabled ? 1 : 0, req.params.id);
+  res.json({ success: true });
+});
+
+router.delete('/webhooks/:id', authMiddleware, (req, res) => {
+  db.prepare('DELETE FROM webhooks WHERE id = ?').run(req.params.id);
+  res.json({ success: true });
+});
+
+router.get('/webhooks/:id/logs', authMiddleware, (req, res) => {
+  const logs = db.prepare('SELECT * FROM webhook_logs WHERE webhookId = ? ORDER BY date DESC LIMIT 50').all(req.params.id);
+  res.json(logs);
+});
+
+// ============================================================
+// Memos webhook receiver
+// ============================================================
+router.post('/webhooks/memos', (req, res) => {
+  try {
+    const enabled = db.prepare("SELECT value FROM settings WHERE key = 'memos_webhook_enabled'").get() as any;
+    if (!enabled || enabled.value !== '1') {
+      return res.status(200).json({ message: 'Memos webhook disabled' });
+    }
+
+    const { activityType, creatorId, memo } = req.body;
+    if (activityType !== 'memos.memo.created' || !memo?.content) {
+      return res.status(200).json({ message: 'Ignored event' });
+    }
+
+    // Filter by allowed user IDs
+    const userFilter = db.prepare("SELECT value FROM settings WHERE key = 'memos_user_filter'").get() as any;
+    if (userFilter?.value?.trim()) {
+      const allowedIds = userFilter.value.split(',').map((s: string) => s.trim()).filter(Boolean);
+      if (allowedIds.length > 0 && !allowedIds.includes(String(creatorId))) {
+        return res.status(200).json({ message: 'Creator not in allowed list' });
+      }
+    }
+
+    // Check for duplicate (avoid creating same memo twice)
+    const existing = db.prepare("SELECT id FROM moments WHERE content = ? ORDER BY date DESC LIMIT 1").get(memo.content?.trim()) as any;
+    if (existing) {
+      return res.status(200).json({ message: 'Duplicate detected' });
+    }
+
+    const id = 'm_' + randomUUID();
+    const date = new Date().toISOString();
+    db.prepare('INSERT INTO moments (id, content, date, images, likes) VALUES (?, ?, ?, ?, 0)')
+      .run(id, memo.content?.trim(), date, JSON.stringify([]));
+
+    console.log(`[Memos] Created moment from memo by creatorId=${creatorId}: ${memo.content?.slice(0, 50)}`);
+    res.json({ success: true, id });
+  } catch (err: any) {
+    console.error('[Memos webhook error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// Full data export / import
+// ============================================================
+router.get('/export', authMiddleware, async (req, res) => {
+  try {
+    const AdmZip = (await import('adm-zip')).default;
+    const zip = new AdmZip();
+
+    const tables = ['settings', 'posts', 'moments', 'comments', 'categories', 'tags', 'post_tags', 'webhooks', 'users'];
+
+    for (const table of tables) {
+      let data: any[];
+      if (table === 'post_tags') {
+        data = db.prepare('SELECT * FROM post_tags').all();
+      } else {
+        data = db.prepare(`SELECT * FROM ${table}`).all();
+      }
+      zip.addFile(`${table}.json`, Buffer.from(JSON.stringify(data, null, 2), 'utf-8'));
+    }
+
+    zip.addFile('manifest.json', Buffer.from(JSON.stringify({
+      exported_at: new Date().toISOString(),
+      version: '1.0',
+      tables: tables.filter(t => t !== 'post_tags' && t !== 'webhook_logs'),
+    }, null, 2), 'utf-8'));
+
+    const zipBuffer = zip.toBuffer();
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="blog-export-${new Date().toISOString().slice(0, 10)}.zip"`);
+    res.send(zipBuffer);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/import', authMiddleware, zipUpload.single('file'), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: '请上传 ZIP 文件' });
+
+    const AdmZip = require('adm-zip');
+    const zip = new AdmZip(req.file.buffer);
+
+    const manifestEntry = zip.getEntry('manifest.json');
+    if (!manifestEntry) return res.status(400).json({ error: '无效的备份文件：缺少 manifest.json' });
+
+    const manifest = JSON.parse(manifestEntry.getData().toString('utf-8'));
+    if (!manifest.version) return res.status(400).json({ error: '无效的备份文件：版本不匹配' });
+
+    const importTransaction = db.transaction(() => {
+      // Clear existing data in reverse dependency order
+      db.prepare('DELETE FROM comments').run();
+      db.prepare('DELETE FROM post_tags').run();
+      db.prepare('DELETE FROM posts').run();
+      db.prepare('DELETE FROM moments').run();
+      db.prepare('DELETE FROM tags').run();
+      db.prepare('DELETE FROM categories').run();
+      db.prepare('DELETE FROM webhooks').run();
+      db.prepare("DELETE FROM users WHERE role != 'admin'").run();
+      // Keep settings (especially auth-related ones)
+
+      const importTable = (table: string) => {
+        const entry = zip.getEntry(`${table}.json`);
+        if (!entry) return;
+        const rows = JSON.parse(entry.getData().toString('utf-8'));
+        if (!Array.isArray(rows) || rows.length === 0) return;
+
+        if (table === 'settings') {
+          const stmt = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+          for (const row of rows) {
+            if (row.key === 'jwt_secret' || row.key === 'admin_password' || row.key === 'password_hash') continue;
+            stmt.run(row.key, row.value);
+          }
+        } else if (table === 'categories') {
+          const stmt = db.prepare('INSERT INTO categories (id, name, slug, description, count) VALUES (?, ?, ?, ?, ?)');
+          for (const row of rows) stmt.run(row.id, row.name, row.slug, row.description || '', row.count || 0);
+        } else if (table === 'tags') {
+          const stmt = db.prepare('INSERT INTO tags (id, name, slug, count) VALUES (?, ?, ?, ?)');
+          for (const row of rows) stmt.run(row.id, row.name, row.slug, row.count || 0);
+        } else if (table === 'posts') {
+          const stmt = db.prepare('INSERT INTO posts (id, title, slug, excerpt, content, coverImage, date, categoryId, views, comments, likes, status, sticky) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+          for (const row of rows) stmt.run(row.id, row.title, row.slug, row.excerpt || '', row.content, row.coverImage || '', row.date, row.categoryId || null, row.views || 0, row.comments || 0, row.likes || 0, row.status || 'published', row.sticky || 0);
+        } else if (table === 'post_tags') {
+          const stmt = db.prepare('INSERT INTO post_tags (postId, tagId) VALUES (?, ?)');
+          for (const row of rows) stmt.run(row.postId, row.tagId);
+        } else if (table === 'moments') {
+          const stmt = db.prepare('INSERT INTO moments (id, content, date, images, likes) VALUES (?, ?, ?, ?, ?)');
+          for (const row of rows) stmt.run(row.id, row.content, row.date, row.images || '[]', row.likes || 0);
+        } else if (table === 'comments') {
+          const stmt = db.prepare('INSERT INTO comments (id, postId, momentId, author, email, content, date, avatar, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+          for (const row of rows) stmt.run(row.id, row.postId || null, row.momentId || null, row.author, row.email, row.content, row.date, row.avatar || '', row.userId || null);
+        } else if (table === 'webhooks') {
+          const stmt = db.prepare('INSERT INTO webhooks (id, name, url, events, secret, enabled, created) VALUES (?, ?, ?, ?, ?, ?, ?)');
+          for (const row of rows) stmt.run(row.id, row.name, row.url, row.events, row.secret || '', row.enabled || 0, row.created);
+        } else if (table === 'users') {
+          const stmt = db.prepare('INSERT OR IGNORE INTO users (id, username, nickname, email, password_hash, avatar, role, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+          for (const row of rows) {
+            if (row.role === 'admin') continue; // Skip admin — keep the existing one
+            stmt.run(row.id, row.username, row.nickname, row.email, row.password_hash, row.avatar || null, row.role || 'user', row.created);
+          }
+        }
+      };
+
+      for (const table of manifest.tables) {
+        importTable(table);
+      }
+      // Also import post_tags if present
+      if (zip.getEntry('post_tags.json')) importTable('post_tags');
+    });
+
+    importTransaction();
+    res.json({ success: true, message: '导入完成，请刷新页面' });
+  } catch (err: any) {
+    console.error('[Import error]', err);
+    res.status(500).json({ error: `导入失败: ${err.message}` });
   }
 });
 

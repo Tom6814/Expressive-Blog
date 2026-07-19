@@ -1,4 +1,5 @@
 const TOKEN_KEY = 'admin_token';
+export const USER_TOKEN_KEY = 'user_token';
 
 function getHeaders(withAuth = false): Record<string, string> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -9,8 +10,33 @@ function getHeaders(withAuth = false): Record<string, string> {
   return headers;
 }
 
+export async function userFetcher<T>(url: string, options?: RequestInit): Promise<T> {
+  const token = localStorage.getItem(USER_TOKEN_KEY);
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const merged: RequestInit = {
+    ...options,
+    headers: { ...headers, ...(options?.headers as Record<string, string> || {}) },
+  };
+  const res = await fetch(url, merged);
+  if (res.status === 401) {
+    localStorage.removeItem(USER_TOKEN_KEY);
+    throw new Error('登录已过期');
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(body.error || `Error: ${res.statusText}`);
+  }
+  return res.json();
+}
+
 export async function fetcher<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, options);
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const merged: RequestInit = {
+    ...options,
+    headers: { ...headers, ...(options?.headers as Record<string, string> || {}) },
+  };
+  const res = await fetch(url, merged);
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(body.error || `API Error: ${res.statusText}`);
@@ -153,7 +179,7 @@ export const api = {
     if (params?.limit) searchParams.append('limit', String(params.limit));
     return fetcher<{ data: any[]; total: number }>(`/api/comments?${searchParams.toString()}`);
   },
-  createComment: (data: { postId?: string; momentId?: string; author: string; email: string; content: string; avatar?: string }) => fetcher('/api/comments', {
+  createComment: (data: { postId?: string; momentId?: string; author: string; email: string; content: string; avatar?: string; userId?: string }) => fetcher('/api/comments', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -210,4 +236,17 @@ export const api = {
 
   // Stats
   getStats: () => fetcher<any>('/api/stats'),
+
+  // Webhooks
+  getWebhooks: () => authFetcher('/api/webhooks'),
+  createWebhook: (data: any) => authFetcher('/api/webhooks', { method: 'POST', body: JSON.stringify(data) }),
+  updateWebhook: (id: string, data: any) => authFetcher(`/api/webhooks/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteWebhook: (id: string) => authFetcher(`/api/webhooks/${id}`, { method: 'DELETE' }),
+  getWebhookLogs: (id: string) => authFetcher(`/api/webhooks/${id}/logs`),
+
+  // User account
+  register: (data: any) => fetcher('/api/users/register', { method: 'POST', body: JSON.stringify(data) }),
+  userLogin: (data: any) => fetcher('/api/users/login', { method: 'POST', body: JSON.stringify(data) }),
+  getMe: () => userFetcher('/api/users/me'),
+  updateProfile: (data: any) => userFetcher('/api/users/me', { method: 'PUT', body: JSON.stringify(data) }),
 };

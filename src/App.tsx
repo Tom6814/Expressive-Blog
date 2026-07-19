@@ -6,6 +6,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
 import { SettingsProvider, useSettings } from "./context/SettingsContext";
+import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./components/Toast";
 import { Layout } from "./components/Layout";
 import { Home } from "./pages/Home";
@@ -15,6 +16,8 @@ import { Tags } from "./pages/Tags";
 import { About } from "./pages/About";
 import { Moments } from "./pages/Moments";
 import { Friends } from "./pages/Friends";
+import { Profile } from "./pages/Profile";
+import { Auth } from "./pages/Auth";
 import { AdminLayout } from "./pages/admin/Layout";
 import { Dashboard } from "./pages/admin/Dashboard";
 import { AdminPosts } from "./pages/admin/Posts";
@@ -55,11 +58,13 @@ function AppContent() {
               <Route path="about" element={<About />} />
               <Route path="moments" element={<Moments />} />
               <Route path="friends" element={<Friends />} />
+              <Route path="profile" element={<Profile />} />
               <Route path="category/:id" element={<Home />} />
               <Route path="tag/:id" element={<Home />} />
             </Route>
 
             <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<AuthRoute><AdminLayout /></AuthRoute>}>
               <Route index element={<Dashboard />} />
               <Route path="posts" element={<AdminPosts />} />
@@ -80,9 +85,11 @@ export default function App() {
   return (
     <SettingsProvider>
       <ThemeProvider>
-        <ToastProvider>
-          <AppContent />
-        </ToastProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <AppContent />
+          </ToastProvider>
+        </AuthProvider>
       </ThemeProvider>
     </SettingsProvider>
   );
