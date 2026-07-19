@@ -1,10 +1,13 @@
 import React, { useState, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import rehypeHighlight from "rehype-highlight";
 import rehypeRaw from "rehype-raw";
+import rehypeKatex from "rehype-katex";
 import rehypeSlug from "rehype-slug";
 import { Copy, Check } from "lucide-react";
+import "katex/dist/katex.min.css";
 
 // ── Code Block with Copy Button ───────────────────
 function CodeBlock({ className, children, ...props }: any) {
@@ -145,8 +148,8 @@ export function MarkdownRenderer({ content, className }: { content: string; clas
   return (
     <div className={`markdown-body max-w-none text-on-surface flex-1 min-w-0 ${className || ""}`}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeHighlight, rehypeRaw, rehypeSlug]}
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeHighlight, rehypeRaw, rehypeKatex, rehypeSlug]}
         components={{
           pre: CodeBlock,
           blockquote: BlockquoteRenderer,

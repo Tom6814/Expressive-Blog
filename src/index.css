@@ -407,6 +407,11 @@
     iframe {
       @apply rounded-xl mx-auto max-w-full my-6;
     }
+
+    /* ── Katex / Math ─────────────────────────────── */
+    .katex-display {
+      @apply overflow-x-auto overflow-y-hidden my-4;
+    }
   }
 
   /* Dark mode: swap h2 ↔ strong colors */
