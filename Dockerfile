@@ -4,7 +4,7 @@
 FROM node:22-slim AS builder
 WORKDIR /app
 
-# Install build dependencies for native modules (better-sqlite3)
+# Install build dependencies for native modules (better-sqlite3, bcrypt)
 RUN apt-get update && apt-get install -y python3 make g++ --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
@@ -22,8 +22,8 @@ RUN npm run build
 FROM node:22-slim
 WORKDIR /app
 
-# Install runtime dependencies for native modules
-RUN apt-get update && apt-get install -y python3 --no-install-recommends \
+# Install build dependencies for native module compilation
+RUN apt-get update && apt-get install -y python3 make g++ --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -33,10 +33,13 @@ RUN groupadd -r appuser && useradd -r -g appuser -d /app appuser
 COPY --from=builder /app/package*.json ./
 RUN npm ci --omit=dev
 
+# Remove build tools after native modules are compiled
+RUN apt-get remove -y python3 make g++ && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+
 # Copy built artifacts
 COPY --from=builder /app/dist ./dist
 
-# Create data directory for SQLite
+# Create data & uploads directories
 RUN mkdir -p /app/data /app/uploads && chown -R appuser:appuser /app
 
 # Switch to non-root user
