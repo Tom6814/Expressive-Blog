@@ -731,7 +731,7 @@ router.post('/moments', authMiddleware, (req, res) => {
   db.prepare('INSERT INTO moments (id, content, date, images, likes) VALUES (?, ?, ?, ?, 0)')
     .run(id, content, date, JSON.stringify(images || []));
   fireWebhooks('moment_created', { id, content });
-  syncMomentToMemos(content).catch(() => {}); // fire-and-forget reverse sync
+  syncMomentToMemos(content, images).catch(() => {}); // fire-and-forget reverse sync
   res.json({ id, content, date, images: images || [], likes: 0, commentCount: 0 });
 });
 
@@ -1307,7 +1307,7 @@ router.post('/webhooks/memos', (req, res) => {
 });
 
 // --- Reverse sync: push moments from blog to Memos ---
-async function syncMomentToMemos(content: string): Promise<boolean> {
+async function syncMomentToMemos(content: string, imageUrls: string[] = []): Promise<boolean> {
   const enabled = db.prepare("SELECT value FROM settings WHERE key = 'memos_reverse_sync'").get() as any;
   if (!enabled || enabled.value !== '1') return false;
 
@@ -1315,17 +1315,61 @@ async function syncMomentToMemos(content: string): Promise<boolean> {
   const urlRow = db.prepare("SELECT value FROM settings WHERE key = 'memos_base_url'").get() as any;
   if (!tokenRow?.value || !urlRow?.value) return false;
 
+  const baseUrl = urlRow.value.replace(/\/$/, '');
+  const token = tokenRow.value;
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const attachmentNames: string[] = [];
+
+  // Upload images as Memos attachments
+  for (const imageUrl of imageUrls) {
+    if (!imageUrl?.trim()) continue;
+    try {
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 15000);
+
+      // 1. Download image
+      const imgRes = await fetch(imageUrl, { signal: ctrl.signal });
+      if (!imgRes.ok) continue;
+      const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+      const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
+      const ext = contentType.split('/')[1] || 'jpg';
+      const filename = `image.${ext}`;
+
+      // 2. Upload to Memos as attachment (base64-encoded)
+      const uploadRes = await fetch(`${baseUrl}/api/v1/attachments`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          filename,
+          content: imgBuffer.toString('base64'),
+          type: contentType,
+        }),
+        signal: ctrl.signal,
+      });
+      if (!uploadRes.ok) continue;
+      const attachment = await uploadRes.json() as any;
+      if (attachment.name) {
+        attachmentNames.push(attachment.name);
+      }
+    } catch (err: any) {
+      console.error('[Memos image upload error]', err.message);
+      // Continue with other images even if one fails
+    }
+  }
+
+  // 3. Create memo with attachments
   try {
-    const controller = new AbortController();
-    setTimeout(() => controller.abort(), 10000);
-    const res = await fetch(`${urlRow.value.replace(/\/$/, '')}/api/v1/memos`, {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 10000);
+    const body: any = { state: 'NORMAL', content, visibility: 'PUBLIC' };
+    if (attachmentNames.length > 0) {
+      body.attachments = attachmentNames.map(name => ({ name }));
+    }
+    const res = await fetch(`${baseUrl}/api/v1/memos`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${tokenRow.value}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ state: 'NORMAL', content, visibility: 'PUBLIC' }),
-      signal: controller.signal,
+      headers,
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
     });
     return res.ok;
   } catch (err: any) {
