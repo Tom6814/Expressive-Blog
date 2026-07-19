@@ -846,8 +846,25 @@ export function AdminSettings() {
                   type="button"
                   onClick={async () => {
                     try {
-                      window.open('/api/export', '_blank');
-                    } catch {}
+                      const token = localStorage.getItem('admin_token');
+                      const res = await fetch('/api/export', {
+                        headers: token ? { Authorization: `Bearer ${token}` } : {},
+                      });
+                      if (!res.ok) {
+                        const err = await res.json().catch(() => ({ error: '导出失败' }));
+                        alert(err.error || '导出失败');
+                        return;
+                      }
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `expressive-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    } catch (err: any) {
+                      alert('导出失败: ' + err.message);
+                    }
                   }}
                   className="flex items-center gap-2 px-5 py-3 bg-primary text-on-primary rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-sm"
                 >
