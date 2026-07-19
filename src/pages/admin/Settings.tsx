@@ -975,7 +975,12 @@ export function AdminSettings() {
                       <div>
                         <label className="block text-sm font-bold text-on-surface-variant mb-1">Memos 服务器地址</label>
                         <input type="text" value={settings.memos_base_url || ""} onChange={e => handleChange("memos_base_url", e.target.value)} placeholder="例: https://memos.example.com" className={inputClass} />
-                        <p className="text-xs text-on-surface-variant/40 mt-1">如 Memos 图片为内部地址，需填写此处以正确加载图片。</p>
+                        <p className="text-xs text-on-surface-variant/40 mt-1">必填。Webhook 仅接收来自此服务器的请求，同时用于解析内部图片地址。</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-on-surface-variant mb-1">Webhook 签名密钥（可选）</label>
+                        <input type="password" value={settings.webhook_secret || ""} onChange={e => handleChange("webhook_secret", e.target.value)} placeholder="与 Memos 中配置的 webhook secret 一致" className={inputClass} />
+                        <p className="text-xs text-on-surface-variant/40 mt-1">在 Memos Webhook 设置中生成，填入此处后仅接受带有效签名的 webhook。</p>
                       </div>
                       {/* Reverse sync: push moments to Memos */}
                       <div className="border-t border-outline-variant/10 pt-4">

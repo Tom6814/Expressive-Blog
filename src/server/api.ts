@@ -1265,7 +1265,15 @@ router.get('/webhooks/:id/logs', authMiddleware, (req, res) => {
 // Memos webhook receiver
 // ============================================================
 router.post('/webhooks/memos', (req, res) => {
-  if (!verifyWebhookSignature(req)) {
+  // Only accept webhooks from a trusted Memos instance
+  const memosUrl = db.prepare("SELECT value FROM settings WHERE key = 'memos_base_url'").get() as any;
+  if (!memosUrl?.value?.trim()) {
+    return res.status(403).json({ error: 'Memos server URL not configured. Set memos_base_url in settings.' });
+  }
+
+  // If webhook secret is configured, verify HMAC signature
+  const secret = db.prepare("SELECT value FROM settings WHERE key = 'webhook_secret'").get() as any;
+  if (secret?.value && !verifyWebhookSignature(req)) {
     return res.status(401).json({ error: 'Invalid webhook signature' });
   }
   try {
