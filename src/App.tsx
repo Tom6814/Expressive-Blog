@@ -48,10 +48,9 @@ function AppContent() {
       </AnimatePresence>
 
       {!isLoading && (
-        <>
-          <PageMeta />
-          <Router>
+        <Router>
           <ScrollToTop />
+          <PageMeta />
           <Routes>
             <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />
@@ -79,7 +78,6 @@ function AppContent() {
             </Route>
           </Routes>
         </Router>
-        </>
       )}
     </>
   );
