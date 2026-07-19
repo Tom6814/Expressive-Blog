@@ -1441,16 +1441,25 @@ async function createMemoInMemos(baseUrl: string, token: string, content: string
 
 async function updateMemoInMemos(baseUrl: string, token: string, memoName: string, content: string, imageUrls: string[]): Promise<boolean> {
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
-  const attachmentNames = await uploadImagesToMemos(baseUrl, token, imageUrls);
-  const ctrl = new AbortController();
-  setTimeout(() => ctrl.abort(), 10000);
-  const body: any = { memo: { content }, updateMask: 'content' };
-  // Note: replacing attachments in Memos requires delete old + create new.
-  // For simplicity, we only update content; images are synced via new attachments.
-  const res = await fetch(`${baseUrl}/api/v1/${memoName}`, {
-    method: 'PATCH', headers, body: JSON.stringify(body), signal: ctrl.signal
-  });
-  return res.ok;
+  try {
+    // Upload new images first
+    const attachmentNames = await uploadImagesToMemos(baseUrl, token, imageUrls);
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 10000);
+    const body: any = { memo: { name: memoName, state: 'NORMAL', content, visibility: 'PUBLIC' }, updateMask: 'content' };
+     if (attachmentNames.length > 0) {
+       body.memo.attachments = attachmentNames.map(n => ({ name: n }));
+       body.updateMask = 'content,attachments';
+     }
+     const res = await fetch(`${baseUrl}/api/v1/${memoName}`, {
+       method: 'PATCH', headers, body: JSON.stringify(body), signal: ctrl.signal
+     });
+    if (!res.ok) console.error(`[Memos] PATCH failed: ${res.status} ${await res.text().catch(()=>'')}`);
+    return res.ok;
+  } catch (err: any) {
+    console.error('[Memos] PATCH error:', err.message);
+    return false;
+  }
 }
 
 async function deleteMemoFromMemos(baseUrl: string, token: string, memoName: string): Promise<boolean> {
