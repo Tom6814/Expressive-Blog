@@ -1481,6 +1481,67 @@ async function deleteMemoFromMemos(baseUrl: string, token: string, memoName: str
 }
 
 // ============================================================
+// Batch sync: pull memos from Memos to blog
+// ============================================================
+router.post('/moments/sync-memos', authMiddleware, async (req, res) => {
+  const cfg = getMemosConfig();
+  if (!cfg) return res.status(400).json({ error: 'Memos not configured. Set memos_reverse_sync, memos_api_token, and memos_base_url.' });
+  const { baseUrl, token } = cfg;
+
+  res.json({ message: 'Syncing started' }); // respond immediately
+
+  try {
+    const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+    let pageToken = '';
+    let synced = 0;
+
+    do {
+      const listUrl = `${baseUrl}/api/v1/memos?pageSize=50${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`;
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 30000);
+      const resp = await fetch(listUrl, { headers, signal: ctrl.signal });
+      if (!resp.ok) break;
+      const page = await resp.json() as any;
+      const memos = page.memos || [];
+
+      for (const memo of memos) {
+        if (!memo.content) continue;
+        // Skip already synced
+        const exists = db.prepare('SELECT id FROM moments WHERE memos_ref = ?').get(memo.name) as any;
+        if (exists) continue;
+
+        // Extract images
+        const rawResources = memo.attachments || memo.resourceList || memo.resources || [];
+        const imageUrls: string[] = rawResources
+          .filter((r: any) => r?.type && r.type.startsWith('image/'))
+          .map((r: any) => {
+            if (r.externalLink) return r.externalLink;
+            if (baseUrl && r.name) {
+              return r.filename ? `${baseUrl}/file/${r.name}/${r.filename}` : `${baseUrl}/file/${r.name}`;
+            }
+            return null;
+          })
+          .filter(Boolean) as string[];
+
+        // Preserve original timestamp
+        const date = memo.createTime || memo.create_time || memo.displayTime || new Date().toISOString();
+
+        const id = 'm_' + randomUUID();
+        db.prepare('INSERT INTO moments (id, content, date, images, likes, memos_ref) VALUES (?, ?, ?, ?, 0, ?)')
+          .run(id, memo.content.trim(), date, JSON.stringify(imageUrls), memo.name);
+        synced++;
+      }
+
+      pageToken = page.nextPageToken || '';
+    } while (pageToken);
+
+    console.log(`[Memos sync] Synced ${synced} memos`);
+  } catch (err: any) {
+    console.error('[Memos sync error]', err.message);
+  }
+});
+
+// ============================================================
 // Full data export / import
 // ============================================================
 router.get('/export', authMiddleware, async (req, res) => {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Plus, Trash2, Pencil, Image as ImageIcon, X } from "lucide-react";
+import { Plus, Trash2, Pencil, Image as ImageIcon, X, RefreshCw } from "lucide-react";
 import { api } from "../../lib/api";
 import { formatDistanceToNow } from "date-fns";
 import { Loader } from "../../components/Loader";
@@ -17,6 +17,7 @@ export function AdminMoments() {
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -72,6 +73,20 @@ export function AdminMoments() {
     }
   };
 
+  const handleSyncMemos = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      await api.syncMemos();
+      alert('同步完成，页面将自动刷新');
+      fetchData();
+    } catch (e: any) {
+      alert('同步失败: ' + (e?.message || '未知错误'));
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (loading) return <Loader />;
 
   const isEditing = editingId !== null;
@@ -80,13 +95,23 @@ export function AdminMoments() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-4xl font-display font-black text-on-surface">Moments</h1>
-        <button 
-          onClick={() => { resetForm(); setIsCreating(!isCreating); }}
-          className="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-full font-bold hover:bg-primary/90 transition-colors shadow-sm"
-        >
-          <Plus className="w-5 h-5" />
-          {isCreating ? "Cancel" : "New Moment"}
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handleSyncMemos}
+            disabled={syncing}
+            className="flex items-center gap-2 px-5 py-3 bg-secondary-container text-on-secondary-container rounded-full font-bold hover:bg-secondary hover:text-on-secondary transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? '同步中...' : '同步 Memos'}
+          </button>
+          <button 
+            onClick={() => { resetForm(); setIsCreating(!isCreating); }}
+            className="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-full font-bold hover:bg-primary/90 transition-colors shadow-sm"
+          >
+            <Plus className="w-5 h-5" />
+            {isCreating ? "Cancel" : "New Moment"}
+          </button>
+        </div>
       </div>
 
       {isCreating ? (

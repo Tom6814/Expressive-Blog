@@ -172,6 +172,7 @@ export const api = {
     body: JSON.stringify(data),
   }),
   deleteMoment: (id: string) => authFetcher(`/api/moments/${id}`, { method: 'DELETE' }),
+  syncMemos: () => authFetcher('/api/moments/sync-memos', { method: 'POST' }),
   likeMoment: (id: string) => fetcher<{ likes: number }>(`/api/moments/${id}/like`, { method: 'POST' }),
 
   // Comments

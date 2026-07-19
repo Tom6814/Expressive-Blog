@@ -1,29 +1,45 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { MessageCircle, Heart, Share2, Sparkles, Send } from "lucide-react";
+import { MessageCircle, Heart, Sparkles, Loader2 } from "lucide-react";
 import { api } from "../lib/api";
 import { Comments } from "../components/Comments";
 import { Sidebar } from "../components/Sidebar";
 import { Loader } from "../components/Loader";
 import { useSettings } from "../context/SettingsContext";
 
+const PAGE_SIZE = 10;
+
 export function Moments() {
   const { settings } = useSettings();
   const [moments, setMoments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
-    loadMoments();
+  const loadMoments = useCallback(async (pageNum: number, append = false) => {
+    if (append) setLoadingMore(true); else setLoading(true);
+    try {
+      const { data, total } = await api.getMoments(pageNum, PAGE_SIZE);
+      setMoments(prev => append ? [...prev, ...data] : data);
+      setHasMore((append ? moments.length + data.length : data.length) < total);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
   }, []);
 
-  const loadMoments = () => {
-    api.getMoments().then(({ data }) => {
-      setMoments(data);
-      setLoading(false);
-    });
+  useEffect(() => {
+    loadMoments(1);
+  }, []);
+
+  const loadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    loadMoments(nextPage, true);
   };
 
   const handleLike = async (id: string) => {
@@ -56,94 +72,114 @@ export function Moments() {
         {loading ? (
           <Loader />
         ) : (
-          <div className="space-y-0 divide-y divide-outline-variant/10 bg-surface-container rounded-[var(--radius-md3)] shadow-sm border border-outline-variant/10 p-4 md:p-8">
-            {moments.map((moment, index) => {
-              const images = (moment.images || []).filter((img: string) => img);
-              let gridClass = "grid-cols-1";
-              if (images.length === 4) gridClass = "grid-cols-2 w-2/3";
-              else if (images.length > 1) gridClass = "grid-cols-3";
-              
-              return (
-                <motion.div
-                  key={moment.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="flex gap-4 pt-6 pb-6 first:pt-0 last:pb-0"
-                >
-                  <div className="shrink-0">
-                    <img 
-                      src={settings.author_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=Author`} 
-                      alt="Avatar"
-                      className="w-12 h-12 rounded-lg object-cover"
-                    />
-                  </div>
-
-                  <div className="flex-grow min-w-0">
-                    <h3 className="font-bold text-gray-900 dark:text-primary mb-1 text-[17px]">
-                      {settings.author_name || "Expressive"}
-                    </h3>
-                    
-                    <p className="text-[16px] text-on-surface leading-normal mb-3 whitespace-pre-wrap">
-                      {moment.content}
-                    </p>
-
-                    {images.length > 0 && (
-                      <div className={`grid gap-1 mb-3 ${gridClass}`}>
-                        {images.map((img: string, i: number) => (
-                          <div key={i} className={`relative overflow-hidden ${images.length === 1 ? 'max-w-[75%] rounded-lg' : 'aspect-square rounded-sm'}`}>
-                            <img 
-                              src={img} 
-                              alt="Moment attachment" 
-                              className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                              referrerPolicy="no-referrer"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[13px] text-on-surface-variant/70">
-                        {formatDistanceToNow(new Date(moment.date), { addSuffix: true, locale: zhCN })}
-                      </span>
-                      
-                      <div className="flex items-center gap-4 bg-surface-container-high rounded-full px-3 py-1">
-                        <button 
-                          onClick={() => handleLike(moment.id)}
-                          className="flex items-center gap-1.5 hover:text-primary transition-colors text-on-surface-variant text-sm"
-                        >
-                          <Heart className={`w-4 h-4 ${moment.likes > 0 ? 'fill-primary text-primary' : ''}`} />
-                          {moment.likes > 0 && <span>{moment.likes}</span>}
-                        </button>
-                        <div className="w-px h-3 bg-outline-variant/30"></div>
-                        <button 
-                          onClick={() => toggleComments(moment.id)}
-                          className={`flex items-center gap-1.5 transition-colors text-sm ${expandedComments[moment.id] ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}
-                        >
-                          <MessageCircle className="w-4 h-4" />
-                          {moment.commentCount > 0 && <span>{moment.commentCount}</span>}
-                        </button>
-                      </div>
+          <>
+            <div className="space-y-0 divide-y divide-outline-variant/10 bg-surface-container rounded-[var(--radius-md3)] shadow-sm border border-outline-variant/10 p-4 md:p-8">
+              {moments.map((moment, index) => {
+                const images = (moment.images || []).filter((img: string) => img);
+                let gridClass = "grid-cols-1";
+                if (images.length === 4) gridClass = "grid-cols-2 w-2/3";
+                else if (images.length > 1) gridClass = "grid-cols-3";
+                
+                return (
+                  <motion.div
+                    key={moment.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: (index % PAGE_SIZE) * 0.03 }}
+                    className="flex gap-4 pt-6 pb-6 first:pt-0 last:pb-0"
+                  >
+                    <div className="shrink-0">
+                      <img 
+                        src={settings.author_avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=Author`} 
+                        alt="Avatar"
+                        className="w-12 h-12 rounded-lg object-cover"
+                      />
                     </div>
 
-                    <AnimatePresence>
-                      {expandedComments[moment.id] && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="overflow-hidden bg-surface-container-high rounded-lg mt-3"
-                        >
-                          <Comments momentId={moment.id} compact={true} />
-                        </motion.div>
+                    <div className="flex-grow min-w-0">
+                      <h3 className="font-bold text-gray-900 dark:text-primary mb-1 text-[17px]">
+                        {settings.author_name || "Expressive"}
+                      </h3>
+                      
+                      <p className="text-[16px] text-on-surface leading-normal mb-3 whitespace-pre-wrap">
+                        {moment.content}
+                      </p>
+
+                      {images.length > 0 && (
+                        <div className={`grid gap-1 mb-3 ${gridClass}`}>
+                          {images.map((img: string, i: number) => (
+                            <div key={i} className={`relative overflow-hidden ${images.length === 1 ? 'max-w-[75%] rounded-lg' : 'aspect-square rounded-sm'}`}>
+                              <img 
+                                src={img} 
+                                alt="Moment attachment" 
+                                className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                referrerPolicy="no-referrer"
+                              />
+                            </div>
+                          ))}
+                        </div>
                       )}
-                    </AnimatePresence>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
+
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[13px] text-on-surface-variant/70">
+                          {formatDistanceToNow(new Date(moment.date), { addSuffix: true, locale: zhCN })}
+                        </span>
+                        
+                        <div className="flex items-center gap-4 bg-surface-container-high rounded-full px-3 py-1">
+                          <button 
+                            onClick={() => handleLike(moment.id)}
+                            className="flex items-center gap-1.5 hover:text-primary transition-colors text-on-surface-variant text-sm"
+                          >
+                            <Heart className={`w-4 h-4 ${moment.likes > 0 ? 'fill-primary text-primary' : ''}`} />
+                            {moment.likes > 0 && <span>{moment.likes}</span>}
+                          </button>
+                          <div className="w-px h-3 bg-outline-variant/30"></div>
+                          <button 
+                            onClick={() => toggleComments(moment.id)}
+                            className={`flex items-center gap-1.5 transition-colors text-sm ${expandedComments[moment.id] ? 'text-primary' : 'text-on-surface-variant hover:text-primary'}`}
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                            {moment.commentCount > 0 && <span>{moment.commentCount}</span>}
+                          </button>
+                        </div>
+                      </div>
+
+                      <AnimatePresence>
+                        {expandedComments[moment.id] && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden bg-surface-container-high rounded-lg mt-3"
+                          >
+                            <Comments momentId={moment.id} compact={true} />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {hasMore && (
+              <div className="flex justify-center mt-8">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="flex items-center gap-2 px-8 py-3 bg-surface-container text-on-surface font-medium rounded-full hover:bg-surface-container-high transition-colors border border-outline-variant/20 disabled:opacity-50"
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> 加载中...
+                    </>
+                  ) : (
+                    '加载更多'
+                  )}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
       
