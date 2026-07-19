@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, User, Mail, Lock, Image } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -9,11 +9,14 @@ interface AuthModalProps {
   mode?: 'login' | 'register';
 }
 
-// Simple math captcha
-function generateCaptcha() {
-  const a = Math.floor(Math.random() * 10) + 1;
-  const b = Math.floor(Math.random() * 10) + 1;
-  return { question: `${a} + ${b} = ?`, answer: a + b };
+interface Captcha {
+  captchaId: string;
+  question: string;
+}
+
+async function fetchCaptcha(): Promise<Captcha> {
+  const res = await fetch('/api/captcha');
+  return res.json();
 }
 
 export default function AuthModal({ open, onClose, mode: initialMode = 'login' }: AuthModalProps) {
@@ -25,13 +28,29 @@ export default function AuthModal({ open, onClose, mode: initialMode = 'login' }
   const [password, setPassword] = useState('');
   const [avatar, setAvatar] = useState('');
   const [captchaInput, setCaptchaInput] = useState('');
-  const [captcha, setCaptcha] = useState(generateCaptcha);
+  const [captcha, setCaptcha] = useState<Captcha | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const refreshCaptcha = useCallback(async () => {
+    try {
+      const c = await fetchCaptcha();
+      setCaptcha(c);
+    } catch {
+      // fallback to local captcha
+      const a = Math.floor(Math.random() * 10) + 1;
+      const b = Math.floor(Math.random() * 10) + 1;
+      setCaptcha({ captchaId: '', question: `${a} + ${b} = ?` });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open) refreshCaptcha();
+  }, [open, refreshCaptcha]);
+
   const resetForm = useCallback(() => {
     setUsername(''); setNickname(''); setEmail(''); setPassword('');
-    setAvatar(''); setCaptchaInput(''); setError(''); setCaptcha(generateCaptcha());
+    setAvatar(''); setCaptchaInput(''); setError('');
   }, []);
 
   const switchMode = () => {
@@ -43,11 +62,12 @@ export default function AuthModal({ open, onClose, mode: initialMode = 'login' }
     e.preventDefault();
     setError('');
 
-    if (parseInt(captchaInput) !== captcha.answer) {
-      setError('验证码错误');
-      setCaptcha(generateCaptcha());
-      setCaptchaInput('');
-      return;
+    // Only validate captcha for registration
+    if (mode === 'register' && captcha) {
+      if (!captchaInput) {
+        setError('请输入验证码');
+        return;
+      }
     }
 
     setLoading(true);
@@ -55,15 +75,23 @@ export default function AuthModal({ open, onClose, mode: initialMode = 'login' }
       if (mode === 'login') {
         await login(username, password);
       } else {
-        await register({ username, nickname: nickname || undefined, email, password, avatar: avatar || undefined });
+        await register({
+          username,
+          nickname: nickname || undefined,
+          email,
+          password,
+          avatar: avatar || undefined,
+          captchaId: captcha?.captchaId,
+          captchaAnswer: captchaInput,
+        });
       }
       onClose();
       resetForm();
       setMode('login');
     } catch (err: any) {
       setError(err.message);
-      setCaptcha(generateCaptcha());
       setCaptchaInput('');
+      refreshCaptcha();
     } finally {
       setLoading(false);
     }
@@ -163,22 +191,24 @@ export default function AuthModal({ open, onClose, mode: initialMode = 'login' }
                 />
               </div>
 
-              {/* Captcha */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-on-surface-variant/50 shrink-0">验证码:</span>
-                <span className="px-3 py-1.5 bg-secondary-container text-on-secondary-container rounded-lg font-mono font-bold text-sm select-none">
-                  {captcha.question}
-                </span>
-                <input
-                  type="text"
-                  value={captchaInput}
-                  onChange={e => setCaptchaInput(e.target.value.replace(/\D/g, ''))}
-                  placeholder="答案"
-                  required
-                  className="w-20 px-3 py-2 bg-surface rounded-xl border border-outline-variant/15 text-on-surface text-center focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-                <button type="button" onClick={() => setCaptcha(generateCaptcha())} className="text-xs text-primary hover:underline shrink-0">换一个</button>
-              </div>
+              {/* Captcha — only for registration */}
+              {mode === 'register' && captcha && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-on-surface-variant/50 shrink-0">验证码:</span>
+                  <span className="px-3 py-1.5 bg-secondary-container text-on-secondary-container rounded-lg font-mono font-bold text-sm select-none">
+                    {captcha.question}
+                  </span>
+                  <input
+                    type="text"
+                    value={captchaInput}
+                    onChange={e => setCaptchaInput(e.target.value.replace(/\D/g, ''))}
+                    placeholder="答案"
+                    required
+                    className="w-20 px-3 py-2 bg-surface rounded-xl border border-outline-variant/15 text-on-surface text-center focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                  <button type="button" onClick={refreshCaptcha} className="text-xs text-primary hover:underline shrink-0">换一个</button>
+                </div>
+              )}
 
               {error && <p className="text-sm text-error font-bold text-center">{error}</p>}
 

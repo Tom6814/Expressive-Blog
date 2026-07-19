@@ -1,15 +1,25 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { randomUUID, createHash } from 'crypto';
+import { randomUUID } from 'crypto';
+import crypto from 'crypto';
 import db from './db';
 
 const router = Router();
 
 // --- JWT Config ---
-const JWT_SECRET = process.env.JWT_SECRET || 'expressive-blog-secret-key-change-me';
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[FATAL] JWT_SECRET environment variable is required in production');
+    process.exit(1);
+  }
+  const randomSecret = 'dev-' + randomUUID();
+  console.warn('[DEV] Using randomly generated JWT_SECRET. Set JWT_SECRET env var for persistence.');
+  return randomSecret;
+})();
 const JWT_EXPIRES = '7d';
 
 function generateToken(): string {
@@ -109,13 +119,32 @@ const zipUpload = multer({
   },
 });
 
+// --- Rate Limiter ---
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function rateLimit(key: string, maxRequests: number, windowMs: number): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= maxRequests) return false;
+  entry.count++;
+  return true;
+}
+
 // --- Auth ---
-router.post('/login', (req, res) => {
+router.post('/login', (req, res, next) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  if (!rateLimit(`auth:${ip}`, 10, 60_000)) return res.status(429).json({ error: '请求过于频繁，请稍后再试' });
+  next();
+}, (req, res) => {
   const { password } = req.body;
   const row = db.prepare("SELECT value FROM settings WHERE key = 'admin_password'").get() as { value: string } | undefined;
   const adminPassword = row?.value?.trim() || 'Expressive';
 
-  if (password?.trim() === adminPassword || password?.trim() === 'Expressive') {
+  if (password?.trim() === adminPassword) {
     const token = generateToken();
     res.json({ success: true, token });
   } else {
@@ -126,7 +155,11 @@ router.post('/login', (req, res) => {
 // --- User Account System ---
 
 function hashPassword(password: string) {
-  return createHash('sha256').update(password).digest('hex');
+  return bcrypt.hashSync(password, 12);
+}
+
+function verifyPassword(password: string, hash: string) {
+  return bcrypt.compareSync(password, hash);
 }
 
 function userAuthMiddleware(req: Request, res: Response, next: NextFunction) {
@@ -142,14 +175,47 @@ function userAuthMiddleware(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+// --- CAPTCHA ---
+const captchaStore = new Map<string, { answer: number; expiresAt: number }>();
+
+// Clean expired captchas periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of captchaStore) {
+    if (now > val.expiresAt) captchaStore.delete(key);
+  }
+}, 60_000);
+
+router.get('/captcha', (_req, res) => {
+  const a = Math.floor(Math.random() * 10) + 1;
+  const b = Math.floor(Math.random() * 10) + 1;
+  const answer = a + b;
+  const captchaId = randomUUID();
+  captchaStore.set(captchaId, { answer, expiresAt: Date.now() + 5 * 60_000 });
+  res.json({ captchaId, question: `${a} + ${b} = ?` });
+});
+
+function verifyCaptcha(captchaId: string | undefined, userAnswer: string | number | undefined): boolean {
+  if (!captchaId || userAnswer === undefined || userAnswer === null || userAnswer === '') return false;
+  const entry = captchaStore.get(captchaId);
+  if (!entry || Date.now() > entry.expiresAt) return false;
+  captchaStore.delete(captchaId); // one-time use
+  return Number(userAnswer) === entry.answer;
+}
+
 // User registration
-router.post('/users/register', (req, res) => {
+router.post('/users/register', (req, res, next) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  if (!rateLimit(`register:${ip}`, 5, 60_000)) return res.status(429).json({ error: '注册请求过于频繁，请稍后再试' });
+  next();
+}, (req, res) => {
   try {
-    const { username, nickname, email, password, avatar } = req.body;
+    const { username, nickname, email, password, avatar, captchaId, captchaAnswer } = req.body;
     if (!username || !email || !password) return res.status(400).json({ error: '用户名、邮箱和密码为必填项' });
     if (!/^[a-z0-9_]+$/.test(username)) return res.status(400).json({ error: '用户名仅支持小写字母、数字和下划线' });
     if (username.length < 3 || username.length > 20) return res.status(400).json({ error: '用户名长度为 3-20 个字符' });
     if (password.length < 6) return res.status(400).json({ error: '密码至少需要 6 个字符' });
+    if (!verifyCaptcha(captchaId, captchaAnswer)) return res.status(400).json({ error: '验证码错误或已过期' });
 
     const existing = db.prepare('SELECT id FROM users WHERE username = ? OR email = ?').get(username, email);
     if (existing) return res.status(400).json({ error: '用户名或邮箱已被注册' });
@@ -168,7 +234,11 @@ router.post('/users/register', (req, res) => {
 });
 
 // User login
-router.post('/users/login', (req, res) => {
+router.post('/users/login', (req, res, next) => {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  if (!rateLimit(`user-login:${ip}`, 10, 60_000)) return res.status(429).json({ error: '请求过于频繁，请稍后再试' });
+  next();
+}, (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: '请输入用户名和密码' });
@@ -176,7 +246,7 @@ router.post('/users/login', (req, res) => {
     const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username.toLowerCase()) as any;
     if (!user) return res.status(401).json({ error: '用户名或密码错误' });
 
-    if (user.password_hash !== hashPassword(password)) {
+    if (!verifyPassword(password, user.password_hash)) {
       return res.status(401).json({ error: '用户名或密码错误' });
     }
 
@@ -223,7 +293,7 @@ router.post('/change-password', authMiddleware, (req, res) => {
   const row = db.prepare("SELECT value FROM settings WHERE key = 'admin_password'").get() as { value: string } | undefined;
   const currentPassword = row?.value?.trim() || 'Expressive';
 
-  if (oldPassword?.trim() === currentPassword || oldPassword?.trim() === 'Expressive') {
+  if (oldPassword?.trim() === currentPassword) {
     db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('admin_password', newPassword.trim());
     res.json({ success: true });
   } else {
@@ -272,10 +342,14 @@ router.delete('/uploads/:id', authMiddleware, (req, res) => {
 });
 
 // --- Settings ---
+const SENSITIVE_KEYS = new Set(['admin_password', 'jwt_secret', 'webhook_secret']);
+
 router.get('/settings', (_req, res) => {
   const rows = db.prepare('SELECT * FROM settings').all() as { key: string, value: string }[];
   const settings = rows.reduce((acc, row) => {
-    acc[row.key] = row.value;
+    if (!SENSITIVE_KEYS.has(row.key) && !row.key.startsWith('admin_') && !row.key.startsWith('secret_')) {
+      acc[row.key] = row.value;
+    }
     return acc;
   }, {} as Record<string, string>);
   res.json(settings);
@@ -657,6 +731,15 @@ router.delete('/moments/:id', authMiddleware, (req, res) => {
 });
 
 // --- Comments ---
+function sanitizeContent(html: string): string {
+  return html
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 router.get('/comments', (req, res) => {
   const { postId, momentId, page = '1', limit = '20' } = req.query;
 
@@ -700,17 +783,20 @@ router.post('/comments', (req, res) => {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
+  const sanitizedContent = sanitizeContent(content);
+  const sanitizedAuthor = sanitizeContent(author?.slice(0, 50) || '');
+
   const id = 'cmt_' + randomUUID();
   const date = new Date().toISOString();
 
   const transaction = db.transaction(() => {
     if (postId) {
       db.prepare('INSERT INTO comments (id, postId, author, email, content, date, avatar, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-        .run(id, postId, author, email, content, date, avatar, userId || null);
+        .run(id, postId, sanitizedAuthor, email, sanitizedContent, date, avatar, userId || null);
       db.prepare('UPDATE posts SET comments = comments + 1 WHERE id = ?').run(postId);
     } else if (momentId) {
       db.prepare('INSERT INTO comments (id, momentId, author, email, content, date, avatar, userId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-        .run(id, momentId, author, email, content, date, avatar, userId || null);
+        .run(id, momentId, sanitizedAuthor, email, sanitizedContent, date, avatar, userId || null);
     }
   });
   transaction();
@@ -908,10 +994,51 @@ router.get('/music/netease-playlist/:id', async (req, res) => {
   }
 });
 
+// Allowed hosts for music proxy (SSRF protection)
+const ALLOWED_PROXY_HOSTS = [
+  /\.music\.126\.net$/,
+  /\.music\.163\.com$/,
+  /\.netease\.com$/,
+  /\.126\.net$/,
+];
+const BLOCKED_IP_PATTERNS = [
+  /^127\./,
+  /^10\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^192\.168\./,
+  /^169\.254\./,
+  /^0\./,
+  /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./,
+  /^::1$/,
+  /^fc00:/,
+  /^fe80:/,
+];
+
+function isAllowedProxyUrl(urlStr: string): boolean {
+  try {
+    const u = new URL(urlStr);
+    // Only allow http/https
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false;
+    // Block internal IPs
+    const hostname = u.hostname;
+    for (const ip of BLOCKED_IP_PATTERNS) {
+      if (ip.test(hostname)) return false;
+    }
+    // Check allowed host list
+    for (const allowed of ALLOWED_PROXY_HOSTS) {
+      if (allowed.test(hostname)) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 // Cover image proxy — fetches remote image and serves it to avoid CORS/referrer issues
 router.get('/music/cover-proxy', async (req, res) => {
   const url = req.query.url as string;
   if (!url) { res.status(400).json({ error: 'Missing url parameter' }); return; }
+  if (!isAllowedProxyUrl(url)) { res.status(403).json({ error: 'URL not allowed' }); return; }
 
   try {
     const imgRes = await fetch(url, {
@@ -936,6 +1063,7 @@ router.get('/music/cover-proxy', async (req, res) => {
 router.get('/music/proxy-stream', async (req, res) => {
   const url = req.query.url as string;
   if (!url) { res.status(400).json({ error: 'Missing url parameter' }); return; }
+  if (!isAllowedProxyUrl(url)) { res.status(403).json({ error: 'URL not allowed' }); return; }
 
   try {
     const upstream = await fetch(url, {
@@ -1007,8 +1135,29 @@ async function fireWebhooks(event: string, payload: any) {
   }));
 }
 
+function verifyWebhookSignature(req: Request): boolean {
+  const secret = db.prepare("SELECT value FROM settings WHERE key = 'webhook_secret'").get() as any;
+  // If no webhook secret is configured, allow requests (backwards compatible)
+  if (!secret || !secret.value) return true;
+  const signature = req.headers['x-webhook-signature'] as string;
+  if (!signature) return false;
+  const expected = crypto.createHmac('sha256', secret.value)
+    .update(JSON.stringify(req.body))
+    .digest('hex');
+  const expectedSig = `sha256=${expected}`;
+  // Constant-time comparison to prevent timing attacks
+  try {
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig));
+  } catch {
+    return false;
+  }
+}
+
 // Incoming webhook endpoint
 router.post('/webhooks/incoming', (req, res) => {
+  if (!verifyWebhookSignature(req)) {
+    return res.status(401).json({ error: 'Invalid webhook signature' });
+  }
   const { event } = req.query;
   const body = req.body;
   console.log(`[Incoming Webhook] event=${event}`, JSON.stringify(body).slice(0, 200));
@@ -1071,6 +1220,9 @@ router.get('/webhooks/:id/logs', authMiddleware, (req, res) => {
 // Memos webhook receiver
 // ============================================================
 router.post('/webhooks/memos', (req, res) => {
+  if (!verifyWebhookSignature(req)) {
+    return res.status(401).json({ error: 'Invalid webhook signature' });
+  }
   try {
     const enabled = db.prepare("SELECT value FROM settings WHERE key = 'memos_webhook_enabled'").get() as any;
     if (!enabled || enabled.value !== '1') {

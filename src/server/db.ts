@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
-import { randomUUID, createHash } from 'crypto';
+import bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
 import path from 'path';
 
 import fs from 'fs';
@@ -179,7 +180,7 @@ export function setupDb() {
     // Seed admin user if not exists
     const adminExists = db.prepare("SELECT id FROM users WHERE username = 'admin'").get();
     if (!adminExists) {
-      const hash = createHash('sha256').update('Expressive').digest('hex');
+      const hash = bcrypt.hashSync('Expressive', 12);
       db.prepare('INSERT INTO users (id, username, nickname, email, password_hash, avatar, role, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
         .run(randomUUID(), 'admin', 'admin', 'admin@expressive.blog', hash, null, 'admin', new Date().toISOString());
     }
