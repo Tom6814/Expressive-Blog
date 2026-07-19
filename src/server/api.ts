@@ -11,13 +11,11 @@ import db from './db';
 const router = Router();
 
 // --- JWT Config ---
-const JWT_SECRET = process.env.JWT_SECRET || (() => {
-  if (process.env.NODE_ENV === 'production') {
-    console.error('[FATAL] JWT_SECRET environment variable is required in production');
-    process.exit(1);
-  }
-  const randomSecret = 'dev-' + randomUUID();
-  console.warn('[DEV] Using randomly generated JWT_SECRET. Set JWT_SECRET env var for persistence.');
+const JWT_SECRET = (() => {
+  if (process.env.JWT_SECRET) return process.env.JWT_SECRET;
+  const isProd = process.env.NODE_ENV === 'production';
+  const randomSecret = (isProd ? '' : 'dev-') + randomUUID();
+  console.warn(`[${isProd ? 'PROD' : 'DEV'}] Using randomly generated JWT_SECRET. Set JWT_SECRET env var for persistence across restarts.`);
   return randomSecret;
 })();
 const JWT_EXPIRES = '7d';
