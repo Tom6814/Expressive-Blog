@@ -132,6 +132,58 @@ docker run -d \
 
 ---
 
+## 🔄 Memos 双向同步
+
+支持与 [Memos](https://usememos.com) 实例双向同步动态（Moments），包括文字、图片、编辑和删除。
+
+### 正向同步（Memos → 博客）
+
+Memos 创建/更新/删除 memo 时，通过 Webhook 自动同步到博客动态。
+
+**配置步骤：**
+
+1. 进入博客管理后台 → 设置 → **Webhook** 标签页
+2. 开启 **启用 Memos 同步**
+3. 填写 **Memos 服务器地址**（必填，如 `https://memos.example.com`）
+4. （推荐）填写 **Webhook 签名密钥**，与 Memos Webhook 设置中的 Secret 一致
+5. 将显示的 **Webhook 端点 URL** 填入 Memos → 设置 → Webhook，勾选全部事件类型（创建/更新/删除）
+
+### 反向同步（博客 → Memos）
+
+在博客后台发布/编辑/删除动态时，自动同步到 Memos。
+
+**配置步骤：**
+
+1. 在上述设置中开启 **启用反向同步**
+2. 填写 **Memos 访问令牌**（在 Memos → 设置 → 访问令牌 中生成）
+
+### 图片同步
+
+- **正向**：Memos 附件自动提取 `externalLink` 或通过 `{memos_base_url}/file/` 拼接内部图片 URL
+- **反向**：博客图片 URL 自动下载并上传为 Memos 附件（`POST /api/v1/attachments`）
+
+### 安全策略
+
+| 层级 | 说明 |
+|------|------|
+| 域名信任（强制） | 必须配置 `memos_base_url`，未配置则拒绝所有 webhook |
+| HMAC 签名（可选） | 配置 `webhook_secret` 后启用 SHA-256 签名验证 |
+
+### 相关设置项
+
+| 设置键 | 说明 | 必填 |
+|--------|------|:--:|
+| `memos_webhook_enabled` | 启用 Memos 同步 | ✓ |
+| `memos_base_url` | Memos 服务器地址 | ✓ |
+| `webhook_secret` | Webhook HMAC 签名密钥 | 推荐 |
+| `memos_user_filter` | 限定接收的 Memos 用户（creatorId 或 username） | |
+| `memos_reverse_sync` | 启用反向同步 | |
+| `memos_api_token` | Memos 访问令牌（反向同步用） | *¹ |
+
+> *¹ 仅启用反向同步时必填
+
+---
+
 ## 🌍 环境变量
 
 | 变量 | 默认值 | 说明 |
