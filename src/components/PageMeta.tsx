@@ -1,23 +1,20 @@
 import { useEffect } from "react";
 import { useSettings } from "../context/SettingsContext";
-import { useLocation } from "react-router-dom";
 
 /**
  * Dynamically sets the HTML <title> and <link rel="icon"> based on settings.
- * Post pages override the title with the post title.
+ * Post pages override the title with the post title (set by Post.tsx).
  */
 export function PageMeta() {
   const { settings } = useSettings();
-  const location = useLocation();
 
   const pageTitle = settings.page_title || settings.site_title || "Expressive Blog";
 
   useEffect(() => {
-    // Only set title on non-post pages (Post.tsx sets its own title)
-    if (!location.pathname.startsWith("/post/")) {
+    if (!window.location.pathname.startsWith("/post/")) {
       document.title = pageTitle;
     }
-  }, [pageTitle, location.pathname]);
+  }, [pageTitle]);
 
   useEffect(() => {
     const favicon = settings.page_favicon;
