@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Plus, Trash2, Image as ImageIcon } from "lucide-react";
+import { Plus, Trash2, Pencil, Image as ImageIcon, X } from "lucide-react";
 import { api } from "../../lib/api";
 import { formatDistanceToNow } from "date-fns";
 import { Loader } from "../../components/Loader";
@@ -10,10 +10,13 @@ export function AdminMoments() {
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   
-  // Form state
+  // Form state (create & edit)
   const [content, setContent] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [newImageUrl, setNewImageUrl] = useState("");
+
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -26,12 +29,10 @@ export function AdminMoments() {
     setLoading(false);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await api.createMoment({ content, images });
-    setIsCreating(false);
+  const resetForm = () => {
     setContent(""); setImages([]); setNewImageUrl("");
-    fetchData();
+    setIsCreating(false);
+    setEditingId(null);
   };
 
   const addImage = () => {
@@ -41,8 +42,31 @@ export function AdminMoments() {
     }
   };
 
+  // Create
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await api.createMoment({ content, images });
+    resetForm();
+    fetchData();
+  };
+
+  // Edit
+  const startEdit = (moment: any) => {
+    setEditingId(moment.id);
+    setContent(moment.content);
+    setImages(moment.images?.filter(Boolean) || []);
+    setIsCreating(true); // reuse the form
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await api.updateMoment(editingId!, { content, images });
+    resetForm();
+    fetchData();
+  };
+
   const handleDelete = async (id: string) => {
-    if (confirm("Are you sure you want to delete this moment?")) {
+    if (confirm("确定要删除这条动态吗？")) {
       await api.deleteMoment(id);
       fetchData();
     }
@@ -50,12 +74,14 @@ export function AdminMoments() {
 
   if (loading) return <Loader />;
 
+  const isEditing = editingId !== null;
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-4xl font-display font-black text-on-surface">Moments</h1>
         <button 
-          onClick={() => setIsCreating(!isCreating)}
+          onClick={() => { resetForm(); setIsCreating(!isCreating); }}
           className="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-full font-bold hover:bg-primary/90 transition-colors shadow-sm"
         >
           <Plus className="w-5 h-5" />
@@ -67,9 +93,20 @@ export function AdminMoments() {
         <motion.form 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          onSubmit={handleSubmit}
+          onSubmit={isEditing ? handleUpdate : handleSubmit}
           className="bg-surface-container rounded-[var(--radius-md3)] p-8 shadow-sm border border-outline-variant/10 space-y-6 mb-8"
         >
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-on-surface">
+              {isEditing ? "编辑动态" : "新建动态"}
+            </h2>
+            {isEditing && (
+              <button type="button" onClick={resetForm} className="p-2 text-on-surface-variant hover:text-on-surface transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-bold text-on-surface-variant mb-2">What's on your mind?</label>
             <textarea 
@@ -121,7 +158,7 @@ export function AdminMoments() {
 
           <div className="flex justify-end pt-4">
             <button type="submit" className="px-8 py-3 bg-primary text-on-primary rounded-full font-bold hover:bg-primary/90 transition-colors shadow-sm">
-              Post Moment
+              {isEditing ? "保存修改" : "Post Moment"}
             </button>
           </div>
         </motion.form>
@@ -136,15 +173,24 @@ export function AdminMoments() {
             transition={{ delay: index * 0.05 }}
             className="bg-surface-container rounded-[var(--radius-md3)] p-6 shadow-sm border border-outline-variant/10 relative group"
           >
-            <button 
-              onClick={() => handleDelete(moment.id)}
-              className="absolute top-6 right-6 p-2 text-error hover:bg-error-container rounded-full opacity-0 group-hover:opacity-100 transition-all"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+            <div className="absolute top-6 right-6 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+              <button 
+                onClick={() => startEdit(moment)}
+                className="p-2 text-on-surface-variant hover:text-primary hover:bg-primary-container rounded-full transition-colors"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => handleDelete(moment.id)}
+                className="p-2 text-on-surface-variant hover:text-error hover:bg-error-container rounded-full transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
             
             <p className="text-sm text-on-surface-variant font-medium mb-4">
               {formatDistanceToNow(new Date(moment.date), { addSuffix: true })}
+              {moment.memos_ref && <span className="ml-2 text-xs text-primary/50">↻ Memos</span>}
             </p>
             <p className="text-on-surface whitespace-pre-wrap mb-4">{moment.content}</p>
             

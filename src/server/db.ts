@@ -79,7 +79,8 @@ export function setupDb() {
       content TEXT NOT NULL,
       date TEXT NOT NULL,
       images TEXT,
-      likes INTEGER DEFAULT 0
+      likes INTEGER DEFAULT 0,
+      memos_ref TEXT
     );
 
     CREATE TABLE IF NOT EXISTS comments (
@@ -135,6 +136,10 @@ export function setupDb() {
   // Migrations for existing databases
   try {
     db.prepare('ALTER TABLE moments ADD COLUMN likes INTEGER DEFAULT 0').run();
+  } catch (e) { /* Column likely exists */ }
+
+  try {
+    db.prepare('ALTER TABLE moments ADD COLUMN memos_ref TEXT').run();
   } catch (e) { /* Column likely exists */ }
 
   try {

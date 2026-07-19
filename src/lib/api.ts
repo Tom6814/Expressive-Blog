@@ -167,6 +167,10 @@ export const api = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
+  updateMoment: (id: string, data: any) => authFetcher(`/api/moments/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
   deleteMoment: (id: string) => authFetcher(`/api/moments/${id}`, { method: 'DELETE' }),
   likeMoment: (id: string) => fetcher<{ likes: number }>(`/api/moments/${id}/like`, { method: 'POST' }),
 
