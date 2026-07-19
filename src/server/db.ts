@@ -174,12 +174,12 @@ export function setupDb() {
     ]));
     insertSetting.run('sidebar_widgets', 'profile,search,categories,tags,recent,trending,stats');
     // Set a default password if not exists
-    insertSetting.run('admin_password', 'Torres114514');
+    insertSetting.run('admin_password', 'Expressive');
 
     // Seed admin user if not exists
     const adminExists = db.prepare("SELECT id FROM users WHERE username = 'admin'").get();
     if (!adminExists) {
-      const hash = createHash('sha256').update('Torres114514').digest('hex');
+      const hash = createHash('sha256').update('Expressive').digest('hex');
       db.prepare('INSERT INTO users (id, username, nickname, email, password_hash, avatar, role, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
         .run(randomUUID(), 'admin', 'admin', 'admin@expressive.blog', hash, null, 'admin', new Date().toISOString());
     }
@@ -311,7 +311,7 @@ function seedDb() {
     { label: 'About', path: '/about' }
   ]));
   insertSetting.run('sidebar_widgets', 'profile,search,categories,tags,recent,trending,stats');
-  insertSetting.run('admin_password', 'Torres114514');
+  insertSetting.run('admin_password', 'Expressive');
   
   // Moments
   const insertMoment = db.prepare('INSERT INTO moments (id, content, date, images) VALUES (?, ?, ?, ?)');

@@ -31,7 +31,7 @@ This guide will help you deploy your blog to [Zeabur](https://zeabur.com).
     - Ensure the port is set to `3000`.
 6.  **Visit your Blog**:
     - Open the domain you configured.
-    - Go to `/admin` to access the dashboard (default admin credentials: `admin` / `Torres114514`).
+    - Go to `/admin` to access the dashboard (default admin credentials: `admin` / `Expressive`).
     - In admin settings under "站点", set your `site_url` to the deployed domain.
 
 ## Account System
@@ -39,7 +39,7 @@ This guide will help you deploy your blog to [Zeabur](https://zeabur.com).
 Expressive Blog includes a built-in user account system. By default, an admin account is created:
 
 - **Username:** `admin`
-- **Password:** `Torres114514`
+- **Password:** `Expressive`
 
 The account system can be toggled on/off in **Admin → 功能 → 账号系统**. When disabled, comments use the traditional name + email approach.
 

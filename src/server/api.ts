@@ -113,9 +113,9 @@ const zipUpload = multer({
 router.post('/login', (req, res) => {
   const { password } = req.body;
   const row = db.prepare("SELECT value FROM settings WHERE key = 'admin_password'").get() as { value: string } | undefined;
-  const adminPassword = row?.value?.trim() || 'Torres114514';
+  const adminPassword = row?.value?.trim() || 'Expressive';
 
-  if (password?.trim() === adminPassword || password?.trim() === 'Torres114514') {
+  if (password?.trim() === adminPassword || password?.trim() === 'Expressive') {
     const token = generateToken();
     res.json({ success: true, token });
   } else {
@@ -221,9 +221,9 @@ router.post('/change-password', authMiddleware, (req, res) => {
     return res.status(400).json({ success: false, error: '新密码至少需要6个字符' });
   }
   const row = db.prepare("SELECT value FROM settings WHERE key = 'admin_password'").get() as { value: string } | undefined;
-  const currentPassword = row?.value?.trim() || 'Torres114514';
+  const currentPassword = row?.value?.trim() || 'Expressive';
 
-  if (oldPassword?.trim() === currentPassword || oldPassword?.trim() === 'Torres114514') {
+  if (oldPassword?.trim() === currentPassword || oldPassword?.trim() === 'Expressive') {
     db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run('admin_password', newPassword.trim());
     res.json({ success: true });
   } else {
