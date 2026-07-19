@@ -29,7 +29,8 @@ export function Moments() {
       const { data, total: t } = await api.getMoments(pageNum, PAGE_SIZE);
       setMoments(prev => append ? [...prev, ...data] : data);
       setTotal(t);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Only scroll for pagination mode (not load-more), use instant to avoid jank
+      if (!append) window.scrollTo({ top: 0, behavior: 'instant' as any });
     } finally {
       setLoading(false);
       setLoadingMore(false);

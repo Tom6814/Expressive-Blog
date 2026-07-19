@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { motion } from "motion/react";
 import { Calendar, Eye, MessageSquare, ArrowRight } from "lucide-react";
@@ -6,6 +6,7 @@ import type { Post } from "../data/mock";
 import { useSettings } from "../context/SettingsContext";
 
 export function PostCard({ post, index }: { post: Post; index: number }) {
+  const navigate = useNavigate();
   const { settings } = useSettings();
   const isHorizontal = settings.home_card_layout === 'avatar-left';
   const isGlow = settings.post_card_style === 'glow';
@@ -20,11 +21,12 @@ export function PostCard({ post, index }: { post: Post; index: number }) {
         initial={{ opacity: 0, y: 32 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.08, duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className={`group relative flex ${
+        className={`group relative flex cursor-pointer ${
           isHorizontal ? 'flex-row' : 'flex-col'
         } bg-surface-container-low rounded-[28px] border border-outline-variant/10 transition-all duration-500 ease-out overflow-hidden
           hover:bg-surface-container hover:border-primary/20 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1
         `}
+        onClick={() => navigate(`/post/${post.slug}`)}
       >
         {/* Cover */}
         <Link
@@ -106,11 +108,12 @@ export function PostCard({ post, index }: { post: Post; index: number }) {
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1, duration: 0.5, type: "spring" }}
-      className={`group relative flex ${isHorizontal ? 'flex-row' : 'flex-col'} bg-surface-container rounded-[var(--radius-md3)] shadow-sm hover:shadow-md transition-shadow duration-300 border border-outline-variant/10 ${
+      className={`group relative flex cursor-pointer ${isHorizontal ? 'flex-row' : 'flex-col'} bg-surface-container rounded-[var(--radius-md3)] shadow-sm hover:shadow-md transition-shadow duration-300 border border-outline-variant/10 ${
         isGlow
           ? 'hover:border-primary/40'
           : 'overflow-hidden'
       }`}
+      onClick={() => navigate(`/post/${post.slug}`)}
     >
       {isGlow && (
           <motion.div

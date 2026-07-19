@@ -57,7 +57,8 @@ export function Header() {
       api.getPosts().then(({ data: posts }) => {
         const results = posts.filter(p => 
           p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-          p.excerpt.toLowerCase().includes(searchQuery.toLowerCase())
+          p.excerpt?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.content?.toLowerCase().includes(searchQuery.toLowerCase())
         );
         setSearchResults(results);
       });
