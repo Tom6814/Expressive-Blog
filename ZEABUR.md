@@ -21,32 +21,32 @@ This guide will help you deploy your blog to [Zeabur](https://zeabur.com).
     - Set `JWT_SECRET` to a strong random string for production security.
 4.  **Configure Persistence (Volume) —— Important!**:
 
-    > ⚠️ 如果不配置 Volume，每次容器重启/重新部署后，数据库和上传文件都会丢失！
+    > ⚠️ If you don't configure a Volume, your database and uploads will be lost on every restart/redeploy!
 
-    Zeabur 上 Volume 需要从 **模板市场** 添加，操作步骤如下：
+    On Zeabur, Volumes are added from the **Template Marketplace**:
 
-    **a) 打开模板市场**
-    - 进入你的项目 → 点击顶部 "+" → **Service** → 切换到 **Template** 标签页
-    - 搜索 **Volume**
-    - 点击 Volume 模板 → **Install**
+    **a) Open Template Marketplace**
+    - Go to your project → click "+" at the top → **Service** → switch to **Template** tab
+    - Search for **Volume**
+    - Click the Volume template → **Install**
 
-    **b) 配置 Volume**
-    - 安装完成后，Volume 会出现在你的项目列表中
-    - 点击 Volume 服务 → **Settings** 标签
-    - 确认 Capacity（默认 1 GiB 足够博客使用）
+    **b) Configure the Volume**
+    - Once installed, the Volume appears in your project list
+    - Click the Volume service → **Settings** tab
+    - Confirm the Capacity (default 1 GiB is enough for a blog)
 
-    **c) 将 Volume 绑定到你的博客服务**
-    - 回到你的博客服务 → **Settings** 标签 → 滚动到 **Volumes** 区域
-    - 点击 **Bind Volume**
-    - **Volume Instance:** 选择刚才创建的 Volume
-    - **Mount Path:** 填入 `/app/data`
-    - 点击 **Confirm**
+    **c) Bind Volume to your blog service**
+    - Go back to your blog service → **Settings** tab → scroll to **Volumes**
+    - Click **Bind Volume**
+    - **Volume Instance:** select the Volume you just created
+    - **Mount Path:** enter `/app/data`
+    - Click **Confirm**
 
-    **d) 重新部署**
-    - 绑定完成后，点击右上角 **Redeploy** 让配置生效
-    - 部署完成后，数据库文件将被持久化存储，不会因重启而丢失
+    **d) Redeploy**
+    - After binding, click **Redeploy** to apply the changes
+    - Once deployed, your database will be persisted and survive restarts
 
-    > 💡 **提示：** `/app/data` 目录下存储 `blog.db` 数据库文件和 `uploads/` 上传文件，绑定 Volume 后这些数据将永久保留。
+    > 💡 **Tip:** The `/app/data` directory stores `blog.db` and uploaded files. Binding a Volume keeps all data safe permanently.
 5.  **Networking**:
     - Go to the **Networking** tab.
     - Create a domain (e.g., `my-blog.zeabur.app`) or bind your custom domain.
