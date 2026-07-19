@@ -176,14 +176,14 @@ export function setupDb() {
     insertSetting.run('sidebar_widgets', 'profile,search,categories,tags,recent,trending,stats');
     // Set a default password if not exists
     insertSetting.run('admin_password', 'Expressive');
+  }
 
-    // Seed admin user if not exists
-    const adminExists = db.prepare("SELECT id FROM users WHERE username = 'admin'").get();
-    if (!adminExists) {
-      const hash = bcrypt.hashSync('Expressive', 12);
-      db.prepare('INSERT INTO users (id, username, nickname, email, password_hash, avatar, role, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-        .run(randomUUID(), 'admin', 'admin', 'admin@expressive.blog', hash, null, 'admin', new Date().toISOString());
-    }
+  // Always ensure admin user exists (both fresh and existing databases)
+  const adminExists = db.prepare("SELECT id FROM users WHERE username = 'admin'").get();
+  if (!adminExists) {
+    const hash = bcrypt.hashSync('Expressive', 12);
+    db.prepare('INSERT INTO users (id, username, nickname, email, password_hash, avatar, role, created) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(randomUUID(), 'admin', 'Admin', 'admin@expressive.blog', hash, null, 'admin', new Date().toISOString());
   }
 }
 
