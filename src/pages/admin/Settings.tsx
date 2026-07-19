@@ -827,6 +827,31 @@ export function AdminSettings() {
             </section>
 
             <section>
+              <SectionTitle>动态加载方式</SectionTitle>
+              <div className="space-y-3">
+                {[
+                  { value: 'load-more', label: '加载更多', desc: '点击按钮加载下一页，适合动态较少的情况' },
+                  { value: 'pagination', label: '翻页', desc: '显示页码导航，适合动态较多的情况，性能更好' },
+                ].map(option => (
+                  <label key={option.value} className="flex items-start gap-4 p-4 bg-surface rounded-xl border border-outline-variant/10 cursor-pointer hover:border-outline-variant/30 transition-colors">
+                    <input
+                      type="radio"
+                      name="moments_pagination"
+                      value={option.value}
+                      checked={(settings.moments_pagination || 'load-more') === option.value}
+                      onChange={e => handleChange("moments_pagination", e.target.value)}
+                      className="mt-1 accent-primary"
+                    />
+                    <div>
+                      <span className="font-bold text-on-surface">{option.label}</span>
+                      <p className="text-xs text-on-surface-variant/50 mt-1">{option.desc}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </section>
+
+            <section>
               <SectionTitle>导航菜单</SectionTitle>
               <div className="space-y-3">
                 {menuItems.map((item, index) => (

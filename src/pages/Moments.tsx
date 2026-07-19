@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { MessageCircle, Heart, Sparkles, Loader2 } from "lucide-react";
+import { MessageCircle, Heart, Sparkles, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { api } from "../lib/api";
 import { Comments } from "../components/Comments";
 import { Sidebar } from "../components/Sidebar";
@@ -17,15 +17,19 @@ export function Moments() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [total, setTotal] = useState(0);
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
+
+  const isPaginated = (settings.moments_pagination || 'load-more') === 'pagination';
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
   const loadMoments = useCallback(async (pageNum: number, append = false) => {
     if (append) setLoadingMore(true); else setLoading(true);
     try {
-      const { data, total } = await api.getMoments(pageNum, PAGE_SIZE);
+      const { data, total: t } = await api.getMoments(pageNum, PAGE_SIZE);
       setMoments(prev => append ? [...prev, ...data] : data);
-      setHasMore((append ? moments.length + data.length : data.length) < total);
+      setTotal(t);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -35,6 +39,12 @@ export function Moments() {
   useEffect(() => {
     loadMoments(1);
   }, []);
+
+  const goToPage = (p: number) => {
+    if (p < 1 || p > totalPages || p === page) return;
+    setPage(p);
+    loadMoments(p);
+  };
 
   const loadMore = () => {
     const nextPage = page + 1;
@@ -53,6 +63,61 @@ export function Moments() {
 
   const toggleComments = (id: string) => {
     setExpandedComments(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    // Show max 7 page buttons
+    const pages: number[] = [];
+    let start = Math.max(1, page - 3);
+    let end = Math.min(totalPages, page + 3);
+    if (end - start < 6) {
+      if (start === 1) end = Math.min(totalPages, start + 6);
+      else start = Math.max(1, end - 6);
+    }
+    for (let i = start; i <= end; i++) pages.push(i);
+
+    return (
+      <div className="flex items-center justify-center gap-1 mt-8">
+        <button
+          onClick={() => goToPage(page - 1)}
+          disabled={page <= 1}
+          className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-high disabled:opacity-30 transition-colors"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        {start > 1 && (
+          <>
+            <button onClick={() => goToPage(1)} className="w-10 h-10 rounded-lg text-sm font-medium text-on-surface-variant hover:bg-surface-container-high transition-colors">1</button>
+            {start > 2 && <span className="px-1 text-on-surface-variant/40">...</span>}
+          </>
+        )}
+        {pages.map(p => (
+          <button
+            key={p}
+            onClick={() => goToPage(p)}
+            className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
+              p === page ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:bg-surface-container-high'
+            }`}
+          >
+            {p}
+          </button>
+        ))}
+        {end < totalPages && (
+          <>
+            {end < totalPages - 1 && <span className="px-1 text-on-surface-variant/40">...</span>}
+            <button onClick={() => goToPage(totalPages)} className="w-10 h-10 rounded-lg text-sm font-medium text-on-surface-variant hover:bg-surface-container-high transition-colors">{totalPages}</button>
+          </>
+        )}
+        <button
+          onClick={() => goToPage(page + 1)}
+          disabled={page >= totalPages}
+          className="p-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-high disabled:opacity-30 transition-colors"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -162,7 +227,7 @@ export function Moments() {
               })}
             </div>
 
-            {hasMore && (
+            {!isPaginated && !loading && (
               <div className="flex justify-center mt-8">
                 <button
                   onClick={loadMore}
@@ -170,15 +235,15 @@ export function Moments() {
                   className="flex items-center gap-2 px-8 py-3 bg-surface-container text-on-surface font-medium rounded-full hover:bg-surface-container-high transition-colors border border-outline-variant/20 disabled:opacity-50"
                 >
                   {loadingMore ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" /> 加载中...
-                    </>
+                    <><Loader2 className="w-4 h-4 animate-spin" /> 加载中...</>
                   ) : (
-                    '加载更多'
+                    `加载更多 (${moments.length}/${total})`
                   )}
                 </button>
               </div>
             )}
+
+            {isPaginated && renderPagination()}
           </>
         )}
       </div>

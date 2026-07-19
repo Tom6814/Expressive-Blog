@@ -1,15 +1,21 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { Plus, Trash2, Pencil, Image as ImageIcon, X, RefreshCw } from "lucide-react";
+import { Plus, Trash2, Pencil, Image as ImageIcon, X, RefreshCw, Loader2 } from "lucide-react";
 import { api } from "../../lib/api";
 import { formatDistanceToNow } from "date-fns";
 import { Loader } from "../../components/Loader";
 
+const PAGE_SIZE = 20;
+
 export function AdminMoments() {
   const [moments, setMoments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [total, setTotal] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
-  
+
   // Form state (create & edit)
   const [content, setContent] = useState("");
   const [images, setImages] = useState<string[]>([]);
@@ -19,15 +25,25 @@ export function AdminMoments() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const fetchMoments = async (pageNum: number, append = false) => {
+    if (append) setLoadingMore(true); else setLoading(true);
+    try {
+      const { data, total: t } = await api.getMoments(pageNum, PAGE_SIZE);
+      setMoments(prev => append ? [...prev, ...data] : data);
+      setTotal(t);
+      setHasMore((append ? moments.length + data.length : data.length) < t);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
 
-  const fetchData = async () => {
-    setLoading(true);
-    const { data } = await api.getMoments();
-    setMoments(data);
-    setLoading(false);
+  useEffect(() => { fetchMoments(1); }, []);
+
+  const loadMore = () => {
+    const next = page + 1;
+    setPage(next);
+    fetchMoments(next, true);
   };
 
   const resetForm = () => {
@@ -48,7 +64,8 @@ export function AdminMoments() {
     e.preventDefault();
     await api.createMoment({ content, images });
     resetForm();
-    fetchData();
+    setPage(1);
+    fetchMoments(1);
   };
 
   // Edit
@@ -56,20 +73,22 @@ export function AdminMoments() {
     setEditingId(moment.id);
     setContent(moment.content);
     setImages(moment.images?.filter(Boolean) || []);
-    setIsCreating(true); // reuse the form
+    setIsCreating(true);
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     await api.updateMoment(editingId!, { content, images });
     resetForm();
-    fetchData();
+    setPage(1);
+    fetchMoments(1);
   };
 
   const handleDelete = async (id: string) => {
     if (confirm("确定要删除这条动态吗？")) {
       await api.deleteMoment(id);
-      fetchData();
+      setPage(1);
+      fetchMoments(1);
     }
   };
 
@@ -79,7 +98,8 @@ export function AdminMoments() {
     try {
       await api.syncMemos();
       alert('同步完成，页面将自动刷新');
-      fetchData();
+      setPage(1);
+      fetchMoments(1);
     } catch (e: any) {
       alert('同步失败: ' + (e?.message || '未知错误'));
     } finally {
@@ -195,7 +215,7 @@ export function AdminMoments() {
             key={moment.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
+            transition={{ delay: (index % PAGE_SIZE) * 0.05 }}
             className="bg-surface-container rounded-[var(--radius-md3)] p-6 shadow-sm border border-outline-variant/10 relative group"
           >
             <div className="absolute top-6 right-6 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
@@ -229,6 +249,22 @@ export function AdminMoments() {
           </motion.div>
         ))}
       </div>
+
+      {hasMore && (
+        <div className="mt-8 text-center">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="flex items-center gap-2 mx-auto px-8 py-3 bg-surface-container text-on-surface font-medium rounded-full hover:bg-surface-container-high transition-colors border border-outline-variant/20 disabled:opacity-50"
+          >
+            {loadingMore ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> 加载中...</>
+            ) : (
+              `加载更多 (${moments.length}/${total})`
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

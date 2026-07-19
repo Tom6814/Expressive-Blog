@@ -132,6 +132,62 @@ All site configuration lives in the admin dashboard:
 
 ---
 
+## 🔄 Memos Bidirectional Sync
+
+Real-time sync with [Memos](https://usememos.com) for moments, including text, images, editing, and deletion.
+
+### Forward Sync (Memos → Blog)
+
+Memos creates/updates/deletes memos → webhook syncs to blog moments automatically.
+
+**Setup:**
+
+1. Go to admin → Settings → **Webhook** tab
+2. Enable **Memos Sync**
+3. Fill in **Memos Server URL** (required, e.g. `https://memos.example.com`)
+4. (Recommended) Fill in **Webhook Secret**, matching the secret configured in Memos
+5. Copy the **Webhook Endpoint URL** into Memos → Settings → Webhook, check all event types (created/updated/deleted)
+
+### Reverse Sync (Blog → Memos)
+
+Creating/editing/deleting moments in the blog admin panel auto-syncs to Memos.
+
+**Setup:**
+
+1. In the same settings section, enable **Reverse Sync**
+2. Fill in **Memos Access Token** (generated in Memos → Settings → Access Tokens)
+
+### One-Click Import
+
+The admin Moments page has a **Sync Memos** button that pulls all memos from your Memos account (including images) and imports them in bulk. Already-synced items are skipped via `memos_ref` deduplication.
+
+### Image Sync
+
+- **Forward**: Extracts `externalLink` from Memos attachments, or constructs internal URLs via `{memos_base_url}/file/`
+- **Reverse**: Downloads blog image URLs and uploads them as Memos attachments (`POST /api/v1/attachments`)
+
+### Security
+
+| Tier | Description |
+|------|-------------|
+| Domain trust (mandatory) | `memos_base_url` must be configured; unconfigured webhooks are rejected |
+| HMAC signature (optional) | Set `webhook_secret` to enable SHA-256 signature verification |
+
+### Settings Reference
+
+| Key | Description | Required |
+|-----|-------------|:--:|
+| `memos_webhook_enabled` | Enable Memos sync | ✓ |
+| `memos_base_url` | Memos server URL | ✓ |
+| `webhook_secret` | Webhook HMAC signing secret | Recommended |
+| `memos_user_filter` | Allowed Memos users (creatorId or username) | |
+| `memos_reverse_sync` | Enable reverse sync | |
+| `memos_api_token` | Memos access token (reverse sync) | *¹ |
+
+> *¹ Required only when reverse sync is enabled
+
+---
+
 ## 🌍 Environment Variables
 
 | Variable | Default | Description |
