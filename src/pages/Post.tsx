@@ -5,10 +5,7 @@ import { format } from "date-fns";
 import { 
   Calendar, Eye, MessageSquare, ArrowLeft, Tag as TagIcon, 
   Share2, Clock, ThumbsUp, Copy, Check, ChevronLeft, ChevronRight } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
-import rehypeHighlight from "rehype-highlight";
+import { MarkdownRenderer } from "../components/MarkdownRenderer";
 import "highlight.js/styles/github-dark.css";
 import { api } from "../lib/api";
 import { Comments } from "../components/Comments";
@@ -52,26 +49,6 @@ function CopyButton({ text }: { text: string }) {
     </button>
   );
 }
-
-const PreBlock = ({ children, ...props }: any) => {
-  const textInput = useRef<any>(null);
-  const [code, setCode] = useState("");
-
-  useEffect(() => {
-    if (textInput.current) {
-      setCode(textInput.current.innerText);
-    }
-  }, [children]);
-
-  return (
-    <div className="relative group mb-8">
-      <pre ref={textInput} {...props}>
-        {children}
-      </pre>
-      <CopyButton text={code} />
-    </div>
-  );
-};
 
 export function Post() {
   const { settings } = useSettings();
@@ -273,17 +250,7 @@ export function Post() {
 
           <div className="p-6 lg:p-12">
             <div className="flex gap-8">
-              <div className="markdown-body max-w-none text-on-surface [&>h1:first-child]:hidden flex-1 min-w-0">
-                <ReactMarkdown 
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeRaw, rehypeHighlight]}
-                  components={{
-                    pre: PreBlock
-                  }}
-                >
-                  {addHeadingIds(post.content)}
-                </ReactMarkdown>
-              </div>
+              <MarkdownRenderer content={addHeadingIds(post.content)} className="[&>h1:first-child]:hidden" />
             </div>
 
             {/* Tags & Share */}

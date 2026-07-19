@@ -4,10 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Save, Image, Tag, Settings, Eye, Edit3, Upload, Pin, Globe, FileEdit, X } from "lucide-react";
 import { api } from "../../lib/api";
 import { useToast } from "../../components/Toast";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
-import rehypeHighlight from "rehype-highlight";
+import { MarkdownRenderer } from "../../components/MarkdownRenderer";
 import "highlight.js/styles/github-dark.css";
 
 export function AdminEditor() {
@@ -170,14 +167,7 @@ export function AdminEditor() {
         <div className={`flex-1 overflow-y-auto p-6 md:p-12 ${isPreview ? 'bg-surface' : 'bg-background'}`}>
           <div className="max-w-4xl mx-auto">
             {isPreview ? (
-              <div className="markdown-body max-w-none">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeRaw, rehypeHighlight]}
-                >
-                  {content || "*暂无预览内容...*"}
-                </ReactMarkdown>
-              </div>
+              <MarkdownRenderer content={content || "*暂无预览内容...*"} />
             ) : (
               <textarea
                 value={content}

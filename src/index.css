@@ -204,68 +204,214 @@
     @apply font-display tracking-tight text-on-surface;
   }
 
-  /* Markdown Content Styles */
+  /* ── Markdown Content ─────────────────────────────── */
   .markdown-body {
     @apply text-on-surface leading-loose text-lg;
-  }
-  .markdown-body h1 {
-    @apply text-4xl md:text-5xl font-display font-black mt-12 mb-6 text-on-surface tracking-tight;
-  }
-  .markdown-body h2 {
-    @apply text-3xl md:text-4xl font-display font-bold mt-10 mb-5 tracking-tight;
-    color: var(--md-sys-color-on-surface);
-  }
-  .markdown-body h3 {
-    @apply text-2xl md:text-3xl font-display font-bold mt-8 mb-4 text-on-surface;
-  }
-  .markdown-body h4 {
-    @apply text-xl md:text-2xl font-display font-bold mt-6 mb-3 text-on-surface;
-  }
-  .markdown-body p {
-    @apply mb-6 leading-8 text-on-surface-variant;
-  }
-  .markdown-body strong {
-    @apply font-bold;
-    color: var(--md-sys-color-primary);
-  }
-  .markdown-body em {
-    @apply text-on-surface-variant;
-  }
-  .markdown-body a {
-    @apply text-primary font-bold hover:text-on-primary-container hover:bg-primary-container px-1 rounded-md transition-colors decoration-2 underline-offset-4;
-  }
-  .markdown-body ul {
-    @apply list-disc list-outside ml-6 mb-6 space-y-2 marker:text-primary;
-  }
-  .markdown-body ol {
-    @apply list-decimal list-outside ml-6 mb-6 space-y-2 marker:text-primary font-medium;
-  }
-  .markdown-body blockquote {
-    @apply border-l-4 border-primary bg-surface-container-high p-6 rounded-r-2xl italic text-on-surface-variant text-xl my-8 shadow-sm;
-  }
-  .markdown-body pre {
-    @apply bg-surface-container-highest p-6 rounded-[var(--radius-md3)] overflow-x-auto mb-8 text-sm font-mono text-on-surface border border-outline-variant/10 shadow-inner;
-  }
-  .markdown-body code {
-    @apply bg-surface-container-highest px-2 py-1 rounded-md text-sm font-mono text-primary font-bold border border-outline-variant/20;
-  }
-  .markdown-body pre code {
-    @apply bg-transparent p-0 text-on-surface border-none font-normal;
-  }
-  .markdown-body img {
-    @apply rounded-[var(--radius-md3)] w-full h-auto my-8 shadow-lg border border-outline-variant/10 transition-transform hover:scale-[1.01] duration-500;
-  }
-  .markdown-body hr {
-    @apply border-t-2 border-outline-variant/20 my-12 w-24 mx-auto rounded-full;
-  }
-  .markdown-body table {
-    @apply w-full mb-8 border-collapse overflow-hidden rounded-[var(--radius-md3)] shadow-sm border border-outline-variant/20;
-  }
-  .markdown-body th {
-    @apply bg-surface-container-high p-4 text-left font-bold text-on-surface border-b border-outline-variant/20;
-  }
-  .markdown-body td {
-    @apply p-4 border-b border-outline-variant/10 text-on-surface-variant;
+
+    /* ── Headings ─────────────────────────────────── */
+    h1 {
+      @apply text-4xl md:text-5xl font-display font-black mt-12 mb-6 text-on-surface tracking-tight;
+    }
+    h2 {
+      @apply text-3xl md:text-4xl font-display font-bold mt-10 mb-5 tracking-tight;
+      color: var(--md-sys-color-on-surface);
+    }
+    h3 {
+      @apply text-2xl md:text-3xl font-display font-bold mt-8 mb-4 text-on-surface;
+    }
+    h4 { @apply text-xl md:text-2xl font-display font-bold mt-6 mb-3 text-on-surface; }
+    h5 { @apply text-lg md:text-xl font-display font-bold mt-4 mb-2 text-on-surface; }
+    h6 { @apply text-base md:text-lg font-display font-bold mt-4 mb-2 text-on-surface; }
+
+    /* Heading anchor links (Fuwari-style) */
+    h1, h2, h3, h4, h5, h6 {
+      .anchor {
+        @apply transition -m-0.5 ml-[0.2ch] p-0.5 select-none opacity-0;
+        text-decoration: none !important;
+        .anchor-icon {
+          @apply mx-[0.45ch];
+        }
+      }
+      &:hover .anchor {
+        @apply opacity-100;
+      }
+    }
+
+    /* ── Paragraphs ───────────────────────────────── */
+    p {
+      @apply mb-6 leading-8 text-on-surface-variant;
+    }
+
+    /* ── Bold / Italic ────────────────────────────── */
+    strong { @apply font-bold; color: var(--md-sys-color-primary); }
+    em { @apply text-on-surface-variant; }
+
+    /* ── Links (Fuwari-style dashed underline) ────── */
+    a:not(.no-styling) {
+      @apply relative font-medium;
+      color: var(--md-sys-color-primary);
+      text-decoration: underline;
+      text-decoration-color: color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent);
+      text-decoration-style: dashed;
+      text-underline-offset: 4px;
+      transition: all 0.15s;
+      &:hover {
+        @apply no-underline;
+        background: var(--md-sys-color-primary-container);
+        border-radius: 0.25rem;
+      }
+    }
+
+    /* ── Lists ────────────────────────────────────── */
+    ul {
+      @apply list-disc list-outside ml-6 mb-6 space-y-2;
+    }
+    ol {
+      @apply list-decimal list-outside ml-6 mb-6 space-y-2 font-medium;
+    }
+    ul li::marker, ol li::marker {
+      color: var(--md-sys-color-primary);
+    }
+    /* Task lists */
+    li.task-list-item {
+      @apply list-none -ml-4;
+      input[type="checkbox"] {
+        @apply mr-2 accent-primary;
+      }
+    }
+
+    /* ── Blockquotes (Fuwari-style left bar) ─────── */
+    blockquote {
+      @apply not-italic border-transparent relative my-6 py-2 pl-6 bg-surface-container-high rounded-r-xl;
+      font: inherit;
+      &:before {
+        @apply absolute left-0 top-0 bottom-0 block w-1 rounded-full;
+        content: '';
+        background: var(--md-sys-color-primary);
+      }
+      p:before, p:after { content: none; }
+      p { @apply mb-3; }
+    }
+
+    /* ── Code Blocks ──────────────────────────────── */
+    pre {
+      @apply bg-surface-container-highest p-6 rounded-[var(--radius-md3)] overflow-x-auto mb-8 text-sm font-mono text-on-surface border border-outline-variant/10;
+    }
+    code {
+      @apply px-1.5 py-0.5 rounded-md text-sm font-mono font-normal border border-outline-variant/20;
+      background: var(--md-sys-color-surface-container-highest);
+      color: var(--md-sys-color-primary);
+      font-family: 'JetBrains Mono Variable', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      &::before, &::after { content: none; }
+    }
+    pre code {
+      @apply bg-transparent p-0 text-on-surface border-none font-normal;
+    }
+
+    /* ── Code Copy Button ─────────────────────────── */
+    .code-block-wrapper {
+      @apply relative mb-8;
+      .copy-btn {
+        @apply absolute top-3 right-3 p-2 bg-surface-container/80 backdrop-blur-md rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-all cursor-pointer border-none;
+        opacity: 0;
+      }
+      &:hover .copy-btn {
+        opacity: 1;
+      }
+    }
+
+    /* ── Images ───────────────────────────────────── */
+    img {
+      @apply rounded-xl w-auto max-w-full h-auto my-6 border border-outline-variant/10;
+      box-shadow: 0 4px 24px -6px rgba(0,0,0,0.12);
+    }
+
+    /* ── Horizontal Rule ──────────────────────────── */
+    hr {
+      @apply border-none my-10;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--md-sys-color-outline-variant), transparent);
+    }
+
+    /* ── Tables (responsive) ──────────────────────── */
+    .table-wrapper {
+      @apply w-full overflow-x-auto mb-8 rounded-[var(--radius-md3)] border border-outline-variant/20;
+    }
+    table {
+      @apply w-full border-collapse text-sm;
+    }
+    th {
+      @apply bg-surface-container-high px-4 py-3 text-left font-bold text-on-surface border-b border-outline-variant/20 whitespace-nowrap;
+    }
+    td {
+      @apply px-4 py-3 border-b border-outline-variant/10 text-on-surface-variant;
+    }
+    tr:last-child td { @apply border-none; }
+    tr:hover td { @apply bg-surface-container-high/50; }
+
+    /* ── Admonitions / Callouts ──────────────────── */
+    blockquote.callout {
+      @apply relative rounded-xl border border-outline-variant/15 py-4 pl-14 pr-5 my-6;
+      background: var(--md-sys-color-surface-container-high);
+      &::before {
+        content: '';
+        @apply absolute left-3.5 top-4 w-6 h-6 bg-current rounded-full;
+        mask-size: contain;
+        mask-position: center;
+        mask-repeat: no-repeat;
+        -webkit-mask-size: contain;
+        -webkit-mask-position: center;
+        -webkit-mask-repeat: no-repeat;
+      }
+      .callout-title {
+        @apply font-bold text-sm uppercase tracking-wide mb-2;
+      }
+      p { @apply mb-2 text-sm leading-relaxed; }
+      p:last-child { @apply mb-0; }
+    }
+    blockquote.callout-note {
+      @apply border-blue-600/20;
+      color: var(--md-sys-color-primary);
+      background: color-mix(in srgb, var(--md-sys-color-primary) 8%, var(--md-sys-color-surface-container-high));
+      &::before {
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z'%3E%3C/path%3E%3C/svg%3E");
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z'%3E%3C/path%3E%3C/svg%3E");
+      }
+    }
+    blockquote.callout-tip {
+      color: #16a34a;
+      background: color-mix(in srgb, #16a34a 8%, var(--md-sys-color-surface-container-high));
+      &::before {
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z'%3E%3C/path%3E%3C/svg%3E");
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z'%3E%3C/path%3E%3C/svg%3E");
+      }
+    }
+    blockquote.callout-warning {
+      color: #ca8a04;
+      background: color-mix(in srgb, #ca8a04 8%, var(--md-sys-color-surface-container-high));
+      &::before {
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z'%3E%3C/path%3E%3C/svg%3E");
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z'%3E%3C/path%3E%3C/svg%3E");
+      }
+    }
+    blockquote.callout-danger {
+      color: #dc2626;
+      background: color-mix(in srgb, #dc2626 8%, var(--md-sys-color-surface-container-high));
+      &::before {
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z'%3E%3C/path%3E%3C/svg%3E");
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z'%3E%3C/path%3E%3C/svg%3E");
+      }
+    }
+
+    /* ── Iframes / Embeds ─────────────────────────── */
+    iframe {
+      @apply rounded-xl mx-auto max-w-full my-6;
+    }
+
+    /* ── Katex / Math ─────────────────────────────── */
+    .katex-display {
+      @apply overflow-x-auto overflow-y-hidden my-4;
+    }
   }
 
   /* Dark mode: swap h2 ↔ strong colors */
