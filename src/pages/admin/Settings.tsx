@@ -973,9 +973,9 @@ export function AdminSettings() {
                         </code>
                       </div>
                       <div>
-                        <label className="block text-sm font-bold text-on-surface-variant mb-1">限定 Memos 用户 ID</label>
-                        <input type="text" value={settings.memos_user_filter || ""} onChange={e => handleChange("memos_user_filter", e.target.value)} placeholder="可选，逗号分隔多个 ID，例如: 1,2,3" className={inputClass} />
-                        <p className="text-xs text-on-surface-variant/40 mt-1">留空则接收所有用户的 Memo。可在 Memos 用户设置中找到 creatorId。</p>
+                        <label className="block text-sm font-bold text-on-surface-variant mb-1">限定 Memos 用户</label>
+                        <input type="text" value={settings.memos_user_filter || ""} onChange={e => handleChange("memos_user_filter", e.target.value)} placeholder="可选，逗号分隔，例如: 1,sliverwhale" className={inputClass} />
+                        <p className="text-xs text-on-surface-variant/40 mt-1">留空则接收所有用户。支持 creatorId（数字）或 creatorUsername（用户名）。</p>
                       </div>
                     </>
                   )}

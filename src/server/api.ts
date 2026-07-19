@@ -1252,8 +1252,12 @@ router.post('/webhooks/memos', (req, res) => {
     const userFilter = db.prepare("SELECT value FROM settings WHERE key = 'memos_user_filter'").get() as any;
     if (userFilter?.value?.trim()) {
       const allowedIds = userFilter.value.split(',').map((s: string) => s.trim()).filter(Boolean);
-      if (allowedIds.length > 0 && !allowedIds.includes(String(creatorId))) {
-        return res.status(200).json({ message: 'Creator not in allowed list' });
+      if (allowedIds.length > 0) {
+        const creatorName = req.body.creatorName || req.body.creatorUsername || '';
+        const isAllowed = allowedIds.includes(String(creatorId)) || (creatorName && allowedIds.includes(creatorName));
+        if (!isAllowed) {
+          return res.status(200).json({ message: 'Creator not in allowed list' });
+        }
       }
     }
 
