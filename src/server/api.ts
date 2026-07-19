@@ -1441,19 +1441,18 @@ async function createMemoInMemos(baseUrl: string, token: string, content: string
 
 async function updateMemoInMemos(baseUrl: string, token: string, memoName: string, content: string, imageUrls: string[]): Promise<boolean> {
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  // Extract memo ID from resource name (e.g., "memos/abc123" → "abc123")
+  const memoId = memoName.includes('/') ? memoName.split('/').pop() : memoName;
   try {
-    // Upload new images first
     const attachmentNames = await uploadImagesToMemos(baseUrl, token, imageUrls);
+    const body: any = { state: 'NORMAL', content, visibility: 'PUBLIC' };
+    if (attachmentNames.length > 0) body.attachments = attachmentNames.map(n => ({ name: n }));
+    // updateMask is a QUERY PARAMETER, not in the body!
+    const params = new URLSearchParams({ updateMask: attachmentNames.length > 0 ? 'content,attachments' : 'content' });
     const ctrl = new AbortController();
     setTimeout(() => ctrl.abort(), 10000);
-    const body: any = { memo: { name: memoName, state: 'NORMAL', content, visibility: 'PUBLIC' }, updateMask: 'content' };
-     if (attachmentNames.length > 0) {
-       body.memo.attachments = attachmentNames.map(n => ({ name: n }));
-       body.updateMask = 'content,attachments';
-     }
-     const res = await fetch(`${baseUrl}/api/v1/${memoName}`, {
-       method: 'PATCH', headers, body: JSON.stringify(body), signal: ctrl.signal
-     });
+    const url = `${baseUrl}/api/v1/memos/${memoId}?${params}`;
+    const res = await fetch(url, { method: 'PATCH', headers, body: JSON.stringify(body), signal: ctrl.signal });
     if (!res.ok) console.error(`[Memos] PATCH failed: ${res.status} ${await res.text().catch(()=>'')}`);
     return res.ok;
   } catch (err: any) {
@@ -1463,10 +1462,11 @@ async function updateMemoInMemos(baseUrl: string, token: string, memoName: strin
 }
 
 async function deleteMemoFromMemos(baseUrl: string, token: string, memoName: string): Promise<boolean> {
+  const memoId = memoName.includes('/') ? memoName.split('/').pop() : memoName;
   const headers = { 'Authorization': `Bearer ${token}` };
   const ctrl = new AbortController();
   setTimeout(() => ctrl.abort(), 10000);
-  const res = await fetch(`${baseUrl}/api/v1/${memoName}`, {
+  const res = await fetch(`${baseUrl}/api/v1/memos/${memoId}`, {
     method: 'DELETE', headers, signal: ctrl.signal
   });
   return res.ok || res.status === 404;
