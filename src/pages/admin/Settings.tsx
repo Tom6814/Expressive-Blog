@@ -977,6 +977,28 @@ export function AdminSettings() {
                         <input type="text" value={settings.memos_base_url || ""} onChange={e => handleChange("memos_base_url", e.target.value)} placeholder="例: https://memos.example.com" className={inputClass} />
                         <p className="text-xs text-on-surface-variant/40 mt-1">如 Memos 图片为内部地址，需填写此处以正确加载图片。</p>
                       </div>
+                      {/* Reverse sync: push moments to Memos */}
+                      <div className="border-t border-outline-variant/10 pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <span className="text-sm font-bold text-on-surface">启用反向同步</span>
+                            <p className="text-xs text-on-surface-variant/50">在博客发布动态时，自动同步到 Memos</p>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked={settings.memos_reverse_sync === "1"} onChange={e => handleChange("memos_reverse_sync", e.target.checked ? "1" : "0")} className="sr-only peer" />
+                            <div className="w-11 h-6 bg-surface-variant rounded-full peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
+                          </label>
+                        </div>
+                        {settings.memos_reverse_sync === "1" && (
+                          <div className="space-y-3 p-3 bg-surface rounded-xl">
+                            <div>
+                              <label className="block text-sm font-bold text-on-surface-variant mb-1">Memos 访问令牌</label>
+                              <input type="password" value={settings.memos_api_token || ""} onChange={e => handleChange("memos_api_token", e.target.value)} placeholder="在 Memos 设置 → 我的账户 中生成" className={inputClass} />
+                              <p className="text-xs text-on-surface-variant/40 mt-1">在 Memos 后台 → 设置 → 访问令牌 页面生成。</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       <div>
                         <label className="block text-sm font-bold text-on-surface-variant mb-1">限定 Memos 用户</label>
                         <input type="text" value={settings.memos_user_filter || ""} onChange={e => handleChange("memos_user_filter", e.target.value)} placeholder="可选，逗号分隔，例如: 1,sliverwhale" className={inputClass} />

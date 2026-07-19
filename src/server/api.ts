@@ -731,6 +731,7 @@ router.post('/moments', authMiddleware, (req, res) => {
   db.prepare('INSERT INTO moments (id, content, date, images, likes) VALUES (?, ?, ?, ?, 0)')
     .run(id, content, date, JSON.stringify(images || []));
   fireWebhooks('moment_created', { id, content });
+  syncMomentToMemos(content).catch(() => {}); // fire-and-forget reverse sync
   res.json({ id, content, date, images: images || [], likes: 0, commentCount: 0 });
 });
 
@@ -1304,6 +1305,34 @@ router.post('/webhooks/memos', (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// --- Reverse sync: push moments from blog to Memos ---
+async function syncMomentToMemos(content: string): Promise<boolean> {
+  const enabled = db.prepare("SELECT value FROM settings WHERE key = 'memos_reverse_sync'").get() as any;
+  if (!enabled || enabled.value !== '1') return false;
+
+  const tokenRow = db.prepare("SELECT value FROM settings WHERE key = 'memos_api_token'").get() as any;
+  const urlRow = db.prepare("SELECT value FROM settings WHERE key = 'memos_base_url'").get() as any;
+  if (!tokenRow?.value || !urlRow?.value) return false;
+
+  try {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 10000);
+    const res = await fetch(`${urlRow.value.replace(/\/$/, '')}/api/v1/memos`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${tokenRow.value}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ state: 'NORMAL', content, visibility: 'PUBLIC' }),
+      signal: controller.signal,
+    });
+    return res.ok;
+  } catch (err: any) {
+    console.error('[Memos reverse sync error]', err.message);
+    return false;
+  }
+}
 
 // ============================================================
 // Full data export / import
