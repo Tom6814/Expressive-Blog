@@ -156,8 +156,17 @@ function hashPassword(password: string) {
   return bcrypt.hashSync(password, 12);
 }
 
-function verifyPassword(password: string, hash: string) {
-  return bcrypt.compareSync(password, hash);
+function verifyPassword(password: string, hash: string): 'match' | 'migrate' | false {
+  // bcrypt hashes start with $2a$, $2b$, or $2y$
+  if (hash.startsWith('$2')) {
+    return bcrypt.compareSync(password, hash) ? 'match' : false;
+  }
+  // Legacy SHA-256 hash (64 hex characters) — allow migration
+  if (/^[0-9a-f]{64}$/.test(hash)) {
+    const sha256 = crypto.createHash('sha256').update(password).digest('hex');
+    return sha256 === hash ? 'migrate' : false;
+  }
+  return false;
 }
 
 function userAuthMiddleware(req: Request, res: Response, next: NextFunction) {
@@ -244,8 +253,15 @@ router.post('/users/login', (req, res, next) => {
     const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username.toLowerCase()) as any;
     if (!user) return res.status(401).json({ error: '用户名或密码错误' });
 
-    if (!verifyPassword(password, user.password_hash)) {
+    const verifyResult = verifyPassword(password, user.password_hash);
+    if (!verifyResult) {
       return res.status(401).json({ error: '用户名或密码错误' });
+    }
+
+    // Auto-migrate legacy SHA-256 hashes to bcrypt
+    if (verifyResult === 'migrate') {
+      const newHash = hashPassword(password);
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, user.id);
     }
 
     const isAdmin = user.role === 'admin';
