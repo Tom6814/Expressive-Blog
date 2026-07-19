@@ -1267,10 +1267,16 @@ router.post('/webhooks/memos', (req, res) => {
       return res.status(200).json({ message: 'Duplicate detected' });
     }
 
+    // Extract image URLs from resourceList
+    const resourceList = memo.resourceList || [];
+    const imageUrls: string[] = resourceList
+      .filter((r: any) => r.type && r.type.startsWith('image/') && r.externalLink)
+      .map((r: any) => r.externalLink);
+
     const id = 'm_' + randomUUID();
     const date = new Date().toISOString();
     db.prepare('INSERT INTO moments (id, content, date, images, likes) VALUES (?, ?, ?, ?, 0)')
-      .run(id, memo.content?.trim(), date, JSON.stringify([]));
+      .run(id, memo.content?.trim(), date, JSON.stringify(imageUrls));
 
     console.log(`[Memos] Created moment from memo by creatorId=${creatorId}: ${memo.content?.slice(0, 50)}`);
     res.json({ success: true, id });
