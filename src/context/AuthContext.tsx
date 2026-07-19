@@ -14,7 +14,7 @@ interface AuthState {
   user: User | null;
   loading: boolean;
   login: (username: string, password: string) => Promise<User>;
-  register: (data: { username: string; nickname?: string; email: string; password: string; avatar?: string }) => Promise<User>;
+  register: (data: { username: string; nickname?: string; email: string; password: string; avatar?: string; captchaId?: string; captchaAnswer?: string }) => Promise<User>;
   logout: () => void;
   updateProfile: (data: { nickname?: string; avatar?: string; email?: string }) => Promise<void>;
 }
