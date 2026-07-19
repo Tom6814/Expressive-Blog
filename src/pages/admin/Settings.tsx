@@ -373,6 +373,16 @@ export function AdminSettings() {
                   <label className="block text-sm font-bold text-on-surface-variant mb-2">站点图标 URL</label>
                   <input type="url" value={settings.site_icon || ""} onChange={e => handleChange("site_icon", e.target.value)} className={inputClass} />
                 </div>
+                <div>
+                  <label className="block text-sm font-bold text-on-surface-variant mb-2">标签页标题</label>
+                  <input type="text" value={settings.page_title || ""} onChange={e => handleChange("page_title", e.target.value)} placeholder={settings.site_title || "Expressive Blog"} className={inputClass} />
+                  <p className="text-xs text-on-surface-variant/50 mt-1">浏览器标签页上显示的文字，留空则使用站点标题</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-on-surface-variant mb-2">标签页图标 (Favicon)</label>
+                  <input type="url" value={settings.page_favicon || ""} onChange={e => handleChange("page_favicon", e.target.value)} placeholder="https://example.com/favicon.ico" className={inputClass} />
+                  <p className="text-xs text-on-surface-variant/50 mt-1">浏览器标签页和书签栏显示的图标</p>
+                </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-bold text-on-surface-variant mb-2">本站网址</label>
                   <input type="url" value={settings.site_url || ""} onChange={e => handleChange("site_url", e.target.value)} placeholder="https://example.com" className={inputClass} />

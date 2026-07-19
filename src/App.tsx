@@ -28,6 +28,7 @@ import { AdminSettings } from "./pages/admin/Settings";
 import { AdminTaxonomy } from "./pages/admin/Taxonomy";
 import { AdminLogin } from "./pages/admin/Login";
 import { Loader } from "./components/Loader";
+import { PageMeta } from "./components/PageMeta";
 import { AnimatePresence } from "motion/react";
 import { ScrollToTop } from "./components/ScrollToTop";
 
@@ -47,7 +48,9 @@ function AppContent() {
       </AnimatePresence>
 
       {!isLoading && (
-        <Router>
+        <>
+          <PageMeta />
+          <Router>
           <ScrollToTop />
           <Routes>
             <Route path="/" element={<Layout />}>
@@ -76,6 +79,7 @@ function AppContent() {
             </Route>
           </Routes>
         </Router>
+        </>
       )}
     </>
   );
