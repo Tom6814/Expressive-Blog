@@ -71,7 +71,11 @@ docker run -d \
 
 1. 将本仓库推送到 GitHub
 2. 在 Zeabur 中创建项目并选择 GitHub 部署
-3. 添加 **Volume**，挂载路径设为 `/app/data` 保证数据持久化
+3. **添加 Volume 实现数据持久化：**
+   - 点击 **+** → **Service** → **Template** → 搜索 **Volume** → 点击 **Install**
+   - 回到博客服务 → **Settings** → **Volumes** → 点击 **Bind Volume**
+   - 选择刚创建的 Volume 实例，**Mount Path** 填 `/app/data`，点击 Confirm
+   - 点击右上角 **Redeploy** 让配置生效
 4. 绑定自定义域名，并在后台「站点」设置中更新 `site_url`
 
 > 📖 详细说明见 [ZEABUR.md](ZEABUR.md)

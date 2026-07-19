@@ -71,7 +71,11 @@ docker run -d \
 
 1. Push this repo to GitHub
 2. Create a project on Zeabur and deploy from GitHub
-3. Add a **Volume** with mount path `/app/data` for persistence
+3. **Add a Volume for persistence:**
+   - Click **+** → **Service** → **Template** → search **Volume** → Install
+   - Go to your blog service → **Settings** → **Volumes** → **Bind Volume**
+   - Select the Volume instance, set **Mount Path** to `/app/data`, click Confirm
+   - Click **Redeploy** to apply
 4. Bind a custom domain and update `site_url` in admin → 站点 settings
 
 > 📖 See [ZEABUR.md](ZEABUR.md) for detailed instructions.
