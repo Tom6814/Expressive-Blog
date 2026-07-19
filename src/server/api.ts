@@ -1267,11 +1267,27 @@ router.post('/webhooks/memos', (req, res) => {
       return res.status(200).json({ message: 'Duplicate detected' });
     }
 
-    // Extract image URLs from resourceList
-    const resourceList = memo.resourceList || [];
-    const imageUrls: string[] = resourceList
-      .filter((r: any) => r.type && r.type.startsWith('image/') && r.externalLink)
-      .map((r: any) => r.externalLink);
+    // Extract image URLs from memo resources
+    // Supports multiple formats: resourceList (Memos v0.23+), resources (older), resource_list
+    const rawResources = memo.resourceList || memo.resources || memo.resource_list || [];
+    const memosBaseUrl = db.prepare("SELECT value FROM settings WHERE key = 'memos_base_url'").get() as any;
+    const baseUrl = memosBaseUrl?.value?.trim().replace(/\/$/, '') || '';
+    
+    const imageUrls: string[] = rawResources
+      .filter((r: any) => r?.type && r.type.startsWith('image/'))
+      .map((r: any) => {
+        // Use externalLink if available
+        if (r.externalLink) return r.externalLink;
+        // Construct URL from resource id/uid + baseUrl if configured
+        if (baseUrl && (r.id || r.uid)) {
+          const resourceId = r.id ? `r/${r.id}` : `f/${r.uid}`;
+          return `${baseUrl}/file/${r.name || r.filename || resourceId}`;
+        }
+        // Fallback: construct from memo name + baseUrl
+        if (baseUrl && memo.name) return `${baseUrl}/file/${memo.name}`;
+        return null;
+      })
+      .filter(Boolean) as string[];
 
     const id = 'm_' + randomUUID();
     const date = new Date().toISOString();
