@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Search, Menu, Palette, X, ArrowRight, User, LogOut, Settings, Shield } from "lucide-react";
+import { Search, Menu, Palette, X, ArrowRight, User, LogOut, Settings, Shield, Sun, Moon } from "lucide-react";
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
@@ -8,7 +8,7 @@ import { useSettings } from "../context/SettingsContext";
 import { api } from "../lib/api";
 
 export function Header() {
-  const { setCustomizerOpen } = useTheme();
+  const { setCustomizerOpen, isDark, toggleDark } = useTheme();
   const { settings } = useSettings();
   const { user, logout } = useAuth();
   const [menu, setMenu] = useState<{label: string, path?: string, children?: {label: string, path: string}[]}[]>([]);
@@ -161,7 +161,7 @@ export function Header() {
               <Search className="w-5 h-5 group-hover:scale-110 transition-transform" />
             </button>
             {/* User Button */}
-            {settings.account_system !== 'disabled' && (
+            {settings.account_system !== 'disabled' ? (
               <>
                 {user ? (
                   <div className="relative">
@@ -233,6 +233,15 @@ export function Header() {
                   </button>
                 )}
               </>
+            ) : (
+              /* Account system disabled: show theme toggle */
+              <button
+                onClick={toggleDark}
+                className="p-2.5 rounded-full hover:bg-surface-variant/50 text-on-surface-variant hover:text-primary transition-all duration-300"
+                aria-label="Toggle theme"
+              >
+                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
             )}
             {settings.allow_user_override !== 'false' && (
               <button 
